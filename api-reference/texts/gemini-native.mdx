@@ -1,0 +1,232 @@
+---
+title: "Gemini 原生接口"
+api: "POST /v1beta/models/{model}:generateContent"
+description: "兼容 Google Gemini API 原生格式，可直接使用 Google Gen AI SDK。"
+---
+
+- 请求体与响应体与 Gemini API（`generativelanguage.googleapis.com`）保持一致。
+- 非流式调用 `:generateContent`；流式调用 `:streamGenerateContent?alt=sse`。
+- 鉴权支持 `Authorization: Bearer`、`x-goog-api-key` 请求头，或 `?key=` 查询参数，三者任选其一。
+- 使用 Google Gen AI SDK 时，把 `base_url` 设为 `https://api.nodylink.com`。
+
+<RequestExample>
+```bash cURL
+curl "https://api.nodylink.com/v1beta/models/gemini-3.1-pro-preview:generateContent" \
+  -H "x-goog-api-key: sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "systemInstruction": {
+      "parts": [{"text": "你是一个专业的 AI 助手。"}]
+    },
+    "contents": [
+      {"role": "user", "parts": [{"text": "解释一下什么是 Transformer 架构。"}]}
+    ],
+    "generationConfig": {
+      "temperature": 0.7,
+      "maxOutputTokens": 2048
+    }
+  }'
+```
+
+```python Python
+from google import genai
+from google.genai import types
+
+client = genai.Client(
+    api_key="sk-你的密钥",
+    http_options=types.HttpOptions(base_url="https://api.nodylink.com"),
+)
+
+resp = client.models.generate_content(
+    model="gemini-3.1-pro-preview",
+    contents="解释一下什么是 Transformer 架构。",
+    config=types.GenerateContentConfig(
+        system_instruction="你是一个专业的 AI 助手。",
+        temperature=0.7,
+        max_output_tokens=2048,
+    ),
+)
+print(resp.text)
+```
+
+```javascript Node.js
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({
+  apiKey: "sk-你的密钥",
+  httpOptions: { baseUrl: "https://api.nodylink.com" },
+});
+
+const resp = await ai.models.generateContent({
+  model: "gemini-3.1-pro-preview",
+  contents: "解释一下什么是 Transformer 架构。",
+  config: {
+    systemInstruction: "你是一个专业的 AI 助手。",
+    temperature: 0.7,
+    maxOutputTokens: 2048,
+  },
+});
+console.log(resp.text);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {"text": "Transformer 是一种基于自注意力机制的神经网络架构……"}
+        ]
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 18,
+    "candidatesTokenCount": 356,
+    "totalTokenCount": 1022,
+    "thoughtsTokenCount": 648
+  },
+  "modelVersion": "gemini-3.1-pro-preview"
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="x-goog-api-key" type="string">
+  API Key。也可以改用 `Authorization: Bearer <API Key>` 请求头或 `key` 查询参数。
+</ParamField>
+
+## 路径参数
+
+<ParamField path="model" type="string" required>
+  Gemini 模型 ID，例如 `gemini-3.1-pro-preview`、`gemini-3-flash-preview`。可用模型以 [模型广场](https://nodylink.com/market) 为准。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="contents" type="array" required>
+  对话内容列表。
+
+  <Expandable title="Content 对象">
+    <ParamField body="role" type="string">
+      `user` 或 `model`。
+    </ParamField>
+    <ParamField body="parts" type="array" required>
+      内容片段。常用类型：
+
+      - 文本：`{"text": "..."}`
+      - 内联图片：`{"inlineData": {"mimeType": "image/png", "data": "<base64>"}}`
+      - 文件链接：`{"fileData": {"mimeType": "image/jpeg", "fileUri": "https://..."}}`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="systemInstruction" type="object">
+  系统指令，格式为 `{"parts": [{"text": "..."}]}`。
+</ParamField>
+
+<ParamField body="generationConfig" type="object">
+  生成配置。
+
+  <Expandable title="属性">
+    <ParamField body="temperature" type="number">
+      采样温度，取值 0 到 2。
+    </ParamField>
+    <ParamField body="topP" type="number">
+      核采样阈值。
+    </ParamField>
+    <ParamField body="topK" type="integer">
+      Top-K 采样。
+    </ParamField>
+    <ParamField body="maxOutputTokens" type="integer">
+      最大输出 token 数。
+    </ParamField>
+    <ParamField body="stopSequences" type="string[]">
+      停止序列。
+    </ParamField>
+    <ParamField body="responseMimeType" type="string">
+      输出格式，例如 `application/json`。
+    </ParamField>
+    <ParamField body="responseSchema" type="object">
+      配合 `responseMimeType: "application/json"` 使用的输出 Schema。
+    </ParamField>
+    <ParamField body="thinkingConfig" type="object">
+      思考配置，例如 `{"thinkingLevel": "high", "includeThoughts": true}`。
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="tools" type="array">
+  工具列表，例如 `[{"functionDeclarations": [...]}]`。
+</ParamField>
+
+<ParamField body="safetySettings" type="array">
+  安全设置，每项包含 `category` 和 `threshold`。
+</ParamField>
+
+## 响应
+
+<ResponseField name="candidates" type="array">
+  候选回复列表。
+
+  <Expandable title="属性">
+    <ResponseField name="content" type="object">
+      回复内容，`role` 为 `model`，正文在 `parts[].text` 中。
+    </ResponseField>
+    <ResponseField name="finishReason" type="string">
+      结束原因：`STOP`、`MAX_TOKENS`、`SAFETY` 等。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usageMetadata" type="object">
+  token 用量。
+
+  <Expandable title="属性">
+    <ResponseField name="promptTokenCount" type="integer">
+      输入 token 数。
+    </ResponseField>
+    <ResponseField name="candidatesTokenCount" type="integer">
+      输出 token 数，不含思考 token。
+    </ResponseField>
+    <ResponseField name="thoughtsTokenCount" type="integer">
+      思考 token 数，按输出价格计费。
+    </ResponseField>
+    <ResponseField name="totalTokenCount" type="integer">
+      总 token 数。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## 流式输出
+
+把路径中的 `:generateContent` 换成 `:streamGenerateContent`，并加上 `alt=sse` 查询参数：
+
+```bash
+curl "https://api.nodylink.com/v1beta/models/gemini-3.1-pro-preview:streamGenerateContent?alt=sse" \
+  -H "x-goog-api-key: sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{"contents": [{"role": "user", "parts": [{"text": "写一首关于秋天的诗"}]}]}'
+```
+
+每个 `data:` 事件都是一个结构与上面相同的响应对象，`parts[].text` 为本次新增的内容。
+
+使用 SDK 时调用 `generate_content_stream`：
+
+```python
+for chunk in client.models.generate_content_stream(
+    model="gemini-3.1-pro-preview",
+    contents="写一首关于秋天的诗",
+):
+    print(chunk.text, end="")
+```
+
+<Tip>
+  Gemini 模型同样可以通过 [对话补全接口](/api-reference/texts/chat-completions) 以 OpenAI 格式调用。
+</Tip>

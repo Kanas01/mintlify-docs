@@ -1,0 +1,293 @@
+---
+title: "Seedance 2.5"
+api: "POST /v2/videos/generations"
+description: "字节跳动 Doubao Seedance 2.5 视频生成：最长 30 秒、最多 30 张参考图，支持视频编辑与延长。请求体与火山方舟官方一致。"
+---
+
+- 请求体与 [火山方舟视频生成 API](https://www.volcengine.com/docs/82379/1520757) 官方格式一致，用法与 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0) 相同，素材上限和时长范围更大。
+- 异步接口：提交后立即返回任务 `id`，再调用 [查询视频任务](/api-reference/videos/task-status) 获取结果。
+- 计费与时长、分辨率、是否包含参考视频相关，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+## 模型
+
+| 模型 ID | 说明 |
+| - | - |
+| `doubao-seedance-2-5-260628` | 支持文生视频、首尾帧、多模态参考、视频编辑和视频延长 |
+
+可用模型以 [模型广场](https://nodylink.com/market) 为准。
+
+## 与 2.0 的主要差异
+
+| 项目 | Seedance 2.0 | Seedance 2.5 |
+| - | - | - |
+| 时长 | 4～15 秒 | 4～30 秒 |
+| 参考图 | 最多 9 张 | 最多 30 张 |
+| 参考视频 | 最多 3 个，总时长不超过 15 秒 | 最多 10 个，总时长不超过 30 秒 |
+| 参考音频 | 最多 3 段，必须搭配图片或视频 | 最多 10 段，总时长不超过 30 秒，可以单独使用 |
+| 分辨率 | 480p / 720p / 1080p | 480p / 720p / 1080p |
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v2/videos/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2-5-260628",
+    "content": [
+      {"type": "text", "text": "第一视角穿越雨后的霓虹街道，镜头稳定前行，音频1作为背景音乐"},
+      {"type": "audio_url", "audio_url": {"url": "https://example.com/bgm.mp3"}, "role": "reference_audio"}
+    ],
+    "resolution": "1080p",
+    "ratio": "16:9",
+    "duration": 20
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v2/videos/generations",
+    headers=headers,
+    json={
+        "model": "doubao-seedance-2-5-260628",
+        "content": [
+            {"type": "text", "text": "第一视角穿越雨后的霓虹街道，镜头稳定前行，音频1作为背景音乐"},
+            {"type": "audio_url", "audio_url": {"url": "https://example.com/bgm.mp3"}, "role": "reference_audio"},
+        ],
+        "resolution": "1080p",
+        "ratio": "16:9",
+        "duration": 20,
+    },
+).json()
+task_id = submit["id"]
+
+
+def video_url(data):
+    task = data.get("task") or {}
+    if task.get("outputs"):
+        return task["outputs"][0]
+    return (data.get("content") or {}).get("video_url")
+
+
+while True:
+    task = requests.get(f"{BASE}/v2/videos/generations/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(video_url(task["data"]))
+        break
+    if task["status"] == "FAILURE":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(10)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v2/videos/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "doubao-seedance-2-5-260628",
+    content: [
+      { type: "text", text: "第一视角穿越雨后的霓虹街道，镜头稳定前行，音频1作为背景音乐" },
+      { type: "audio_url", audio_url: { url: "https://example.com/bgm.mp3" }, role: "reference_audio" },
+    ],
+    resolution: "1080p",
+    ratio: "16:9",
+    duration: 20,
+  }),
+}).then((r) => r.json());
+
+const videoUrl = (data) => data?.task?.outputs?.[0] ?? data?.content?.video_url;
+
+while (true) {
+  const task = await fetch(`${BASE}/v2/videos/generations/${submit.id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(videoUrl(task.data));
+    break;
+  }
+  if (task.status === "FAILURE") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 10000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "a3e7c9d2-5f1b-4a86-b0d4-8c2e6f1a9b57",
+  "task_id": "a3e7c9d2-5f1b-4a86-b0d4-8c2e6f1a9b57",
+  "object": "video",
+  "model": "doubao-seedance-2-5-260628",
+  "status": "queued",
+  "progress": 0,
+  "created_at": 1792000000
+}
+```
+
+```json 400
+{
+  "code": "invalid_duration",
+  "message": "duration must be -1 or a positive integer",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required>
+  模型 ID：`doubao-seedance-2-5-260628`。
+</ParamField>
+
+<ParamField body="content" type="array" required>
+  输入内容数组。每一项的结构与 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0) 相同。
+
+  <Expandable title="内容项与上限">
+    | `type` | `role` | 上限 |
+    | - | - | - |
+    | `text` | 无 | 1 条 |
+    | `image_url` | `first_frame` | 1 张 |
+    | `image_url` | `last_frame` | 1 张，需与首帧一起使用 |
+    | `image_url` | `reference_image` | 最多 30 张 |
+    | `video_url` | `reference_video` | 最多 10 个，单个 2～30 秒，总时长不超过 30 秒 |
+    | `audio_url` | `reference_audio` | 最多 10 段，单段 2～30 秒，总时长不超过 30 秒 |
+
+    在提示词中可以用「图片1」「视频1」「音频1」指代参考素材，序号按同类素材在数组中的顺序从 1 开始。
+  </Expandable>
+</ParamField>
+
+<ParamField body="resolution" type="string" default="720p">
+  分辨率：`480p`、`720p`、`1080p`。
+</ParamField>
+
+<ParamField body="ratio" type="string" default="adaptive">
+  宽高比：`16:9`、`4:3`、`1:1`、`3:4`、`9:16`、`21:9`，或 `adaptive`。首帧 / 首尾帧、视频编辑、视频延长任务只能使用 `adaptive`。
+</ParamField>
+
+<ParamField body="duration" type="integer" default="5">
+  视频时长（秒），取值 4～30。传 `-1` 时由模型自动决定时长，提交时按 30 秒上限预扣费用，完成后按实际结果结算。视频编辑任务只能使用 `-1`。
+</ParamField>
+
+<ParamField body="generate_audio" type="boolean" default="true">
+  是否生成与画面同步的音频。
+</ParamField>
+
+<ParamField body="seed" type="integer">
+  随机种子，取值 -1 到 2^32-1。
+</ParamField>
+
+<ParamField body="watermark" type="boolean" default="false">
+  是否添加「AI 生成」水印。
+</ParamField>
+
+<ParamField body="return_last_frame" type="boolean" default="false">
+  是否额外返回视频最后一帧的图片，用于连续生成。
+</ParamField>
+
+<ParamField body="tools" type="array">
+  增强工具。目前支持联网搜索：`[{"type": "web_search"}]`。
+</ParamField>
+
+## 素材要求
+
+| 素材 | 要求 |
+| - | - |
+| 图片 | jpeg / png / webp / bmp / tiff / gif / heic / heif；宽高比 0.4～2.5；边长 300～6000 px；单张小于 30 MB |
+| 视频 | mp4 / mov，H.264 或 H.265 编码；480p～1080p；宽高比 0.4～2.5；帧率 24～60；单个不超过 200 MB |
+| 音频 | wav / mp3；单个不超过 15 MB |
+
+## 任务类型与限制
+
+模型会根据参考素材和提示词意图判断任务类型。视频编辑、视频延长和首尾帧任务对参数有硬性要求，不满足时任务会在执行阶段失败（费用自动退回）。
+
+| 任务类型 | 触发方式 | 限制 |
+| - | - | - |
+| 文生视频 | 只有文本 | 无 |
+| 参考生视频 | 参考素材 + 普通描述 | 无。提示词中避免出现「编辑」「延长」「续写」「删除」「替换」等词，以免被判为其他任务 |
+| 视频编辑 | 参考视频 + 提示词含「编辑视频」「增加」「删除」「修改」「替换」等 | `ratio` 只能为 `adaptive`，`duration` 只能为 `-1`；待编辑视频为 4～30 秒 |
+| 视频延长 | 参考视频 + 提示词含「向前延长」「向后延长」「续写」等 | `ratio` 只能为 `adaptive` |
+| 首帧 / 首尾帧 | 图片 `role` 为 `first_frame` / `last_frame` | `ratio` 只能为 `adaptive` |
+
+## 提交响应
+
+与 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0) 相同：返回 `object` 为 `video`、`status` 为 `queued` 的任务对象，用其中的 `id` 查询结果。
+
+## 使用示例
+
+### 多图参考
+
+```json
+{
+  "model": "doubao-seedance-2-5-260628",
+  "content": [
+    {"type": "text", "text": "图片1的模特穿着图片2的外套，在图片3的街景中走秀"},
+    {"type": "image_url", "image_url": {"url": "https://example.com/model.png"}, "role": "reference_image"},
+    {"type": "image_url", "image_url": {"url": "https://example.com/coat.png"}, "role": "reference_image"},
+    {"type": "image_url", "image_url": {"url": "https://example.com/street.png"}, "role": "reference_image"}
+  ],
+  "resolution": "1080p",
+  "ratio": "9:16",
+  "duration": 12
+}
+```
+
+### 视频编辑
+
+```json
+{
+  "model": "doubao-seedance-2-5-260628",
+  "content": [
+    {"type": "text", "text": "编辑视频1，把画面中的红色汽车替换为白色汽车，其余保持不变"},
+    {"type": "video_url", "video_url": {"url": "https://example.com/source.mp4"}, "role": "reference_video"}
+  ],
+  "ratio": "adaptive",
+  "duration": -1
+}
+```
+
+### 视频延长
+
+```json
+{
+  "model": "doubao-seedance-2-5-260628",
+  "content": [
+    {"type": "text", "text": "向后延长视频1，人物继续走向远处的灯塔"},
+    {"type": "video_url", "video_url": {"url": "https://example.com/clip.mp4"}, "role": "reference_video"}
+  ],
+  "ratio": "adaptive",
+  "duration": 10
+}
+```
+
+### 首尾帧
+
+```json
+{
+  "model": "doubao-seedance-2-5-260628",
+  "content": [
+    {"type": "text", "text": "花朵从含苞到完全盛开的延时摄影"},
+    {"type": "image_url", "image_url": {"url": "https://example.com/bud.jpg"}, "role": "first_frame"},
+    {"type": "image_url", "image_url": {"url": "https://example.com/bloom.jpg"}, "role": "last_frame"}
+  ],
+  "ratio": "adaptive",
+  "duration": 6
+}
+```

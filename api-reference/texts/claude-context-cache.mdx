@@ -1,0 +1,211 @@
+---
+title: "Claude 上下文缓存"
+description: "通过 cache_control 缓存系统提示、长文档和对话前缀，降低重复输入的费用和延迟。"
+---
+
+Claude 上下文缓存（Prompt Caching）适合反复使用的长前缀，例如系统提示、参考文档、代码库或多轮对话历史。在稳定前缀的最后一个内容块上加 `cache_control`，首次请求会写入缓存，有效期内的后续请求直接读取缓存。
+
+<Note>
+  上下文缓存通过 [Claude 消息接口](/api-reference/texts/claude-messages) `POST /v1/messages` 使用。经 `/v1/chat/completions` 调用 Claude 时，不保证 `cache_control` 会生效。
+</Note>
+
+## 适用场景
+
+- 长系统提示：角色设定、规则手册、Few-shot 示例。
+- 文档问答：同一份合同、论文或手册上的多次提问。
+- 代码助手：把仓库关键文件作为固定上下文。
+- 多轮对话：缓存截至上一轮的对话历史。
+
+## 5 分钟缓存
+
+在需要缓存的内容块上添加 `cache_control`。省略 `ttl` 时有效期为 5 分钟：
+
+```bash
+curl https://api.nodylink.com/v1/messages \
+  -H "x-api-key: sk-你的密钥" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 1024,
+    "system": [
+      {
+        "type": "text",
+        "text": "你是一名法律顾问。以下是公司的完整合同文本：……（此处为很长的文档）",
+        "cache_control": {"type": "ephemeral"}
+      }
+    ],
+    "messages": [
+      {"role": "user", "content": "合同中的违约责任条款是什么？"}
+    ]
+  }'
+```
+
+<Warning>
+  `system` 必须写成内容块数组。字符串形式的 `system` 无法添加 `cache_control`。
+</Warning>
+
+## 1 小时缓存
+
+需要同时添加 `anthropic-beta` 请求头，并把 `ttl` 设为 `1h`：
+
+```bash
+curl https://api.nodylink.com/v1/messages \
+  -H "x-api-key: sk-你的密钥" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "anthropic-beta: extended-cache-ttl-2025-04-11" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 1024,
+    "system": [
+      {
+        "type": "text",
+        "text": "（很长的稳定前缀）",
+        "cache_control": {"type": "ephemeral", "ttl": "1h"}
+      }
+    ],
+    "messages": [{"role": "user", "content": "总结一下要点。"}]
+  }'
+```
+
+| `ttl` | 含义 |
+| - | - |
+| `5m` | 缓存 5 分钟，省略 `ttl` 时的默认值 |
+| `1h` | 缓存 1 小时，需要 `anthropic-beta: extended-cache-ttl-2025-04-11` 请求头 |
+
+## 缓存消息内容
+
+`cache_control` 也可以放在 `user` 或 `assistant` 消息的内容块上，用来缓存长文档或多轮对话前缀。把稳定内容和当前问题拆成不同的内容块，只在稳定内容块上添加 `cache_control`：
+
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "text",
+      "text": "（一份很长的参考文档）",
+      "cache_control": {"type": "ephemeral"}
+    },
+    {
+      "type": "text",
+      "text": "根据上面的文档，回答：第三章讲了什么？"
+    }
+  ]
+}
+```
+
+单次请求最多可以设置 4 个缓存断点。
+
+## 用量字段
+
+响应的 `usage` 中会分别返回普通输入、缓存写入和缓存读取的 token 数：
+
+```json
+{
+  "usage": {
+    "input_tokens": 23,
+    "cache_creation_input_tokens": 2619,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+      "ephemeral_5m_input_tokens": 2619,
+      "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 24
+  }
+}
+```
+
+| 字段 | 含义 |
+| - | - |
+| `input_tokens` | 缓存前缀之外的普通输入 |
+| `cache_creation_input_tokens` | 本次写入缓存的 token 数 |
+| `cache_read_input_tokens` | 本次命中缓存的 token 数 |
+| `cache_creation.ephemeral_5m_input_tokens` | 写入 5 分钟缓存的 token 数 |
+| `cache_creation.ephemeral_1h_input_tokens` | 写入 1 小时缓存的 token 数 |
+
+三项输入互不重叠，总输入 token 为 `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`。首次请求通常 `cache_creation_input_tokens > 0`；再次发送相同前缀时，应看到 `cache_read_input_tokens > 0`。
+
+## 计费
+
+| 用量 | 产生时机 | 单价 |
+| - | - | - |
+| 缓存写入 | 首次建立缓存 | 高于普通输入，1 小时缓存高于 5 分钟缓存 |
+| 缓存读取 | 有效期内命中缓存 | 远低于普通输入 |
+| 普通输入 | 缓存前缀之外的输入 | 标准输入价格 |
+
+具体单价以 [模型价格](https://nodylink.com/pricing) 为准，每次请求的缓存用量和扣费可以在 [使用日志](https://nodylink.com/dashboard/logs) 中查看。
+
+## 缓存命中条件
+
+<AccordionGroup>
+  <Accordion title="前缀长度达到最低门槛">
+    缓存前缀通常至少需要 1024 token（部分模型为 2048 或 4096）。前缀不足时，`cache_control` 会被忽略，且不会报错。
+  </Accordion>
+  <Accordion title="前缀逐字节一致">
+    缓存前缀中的文字、空格、换行、图片和内容块顺序都必须保持一致。不要在稳定前缀中放时间戳、随机 ID 等动态内容。工具定义、`system`、`messages` 依次构成前缀，任何一处变化都会让其后的缓存失效。
+  </Accordion>
+  <Accordion title="缓存仍在有效期内">
+    有效期从最后一次访问开始计算，每次命中都会刷新有效期。
+  </Accordion>
+  <Accordion title="请求未触发拒答">
+    如果请求触发模型拒答（`stop_reason` 为 `refusal`），即使报告了缓存写入，该缓存也不会在下次请求中被读取。
+  </Accordion>
+</AccordionGroup>
+
+## 最小可复现示例
+
+下面的脚本生成一个足够长的稳定前缀，连续发送两次相同请求。第二次响应应出现 `cache_read_input_tokens > 0`：
+
+```bash
+export NODYLINK_API_KEY="sk-你的密钥"
+
+python3 - <<'PY' > /tmp/claude-cache-request.json
+import json
+
+paragraph = (
+    "Prompt caching stores a prefix of the request so that later requests "
+    "can reuse the same byte-identical prefix without processing it again. "
+)
+
+print(json.dumps({
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 32,
+    "system": [{
+        "type": "text",
+        "text": "You are a documentation assistant.\n\n" + paragraph * 60,
+        "cache_control": {"type": "ephemeral"},
+    }],
+    "messages": [{"role": "user", "content": "In one sentence, what must remain unchanged?"}],
+}))
+PY
+
+for i in 1 2; do
+  echo "第 $i 次请求"
+  curl -s https://api.nodylink.com/v1/messages \
+    -H "x-api-key: $NODYLINK_API_KEY" \
+    -H "anthropic-version: 2023-06-01" \
+    -H "Content-Type: application/json" \
+    --data @/tmp/claude-cache-request.json \
+  | python3 -c "import json, sys; print(json.load(sys.stdin)['usage'])"
+done
+```
+
+预期结果：
+
+```text
+第 1 次请求：cache_creation_input_tokens > 0，cache_read_input_tokens = 0
+第 2 次请求：cache_creation_input_tokens = 0，cache_read_input_tokens > 0
+```
+
+## 排查清单
+
+缓存没有命中时，按顺序检查：
+
+- 是否通过 `/v1/messages` 调用
+- `system` 是否写成内容块数组，`cache_control` 是否放在具体内容块上
+- 缓存前缀是否达到模型的最低 token 数
+- 两次请求的稳定前缀是否逐字节相同
+- 1 小时缓存是否同时设置了 `ttl: "1h"` 和 `anthropic-beta` 请求头
+- 两次请求间隔是否超过有效期
+- `stop_reason` 是否为 `refusal`

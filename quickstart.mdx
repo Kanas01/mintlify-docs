@@ -1,47 +1,135 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "快速开始"
+description: "创建 API Key，配置 Base URL，完成第一次调用。"
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+## 准备工作
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+- 一个 NODYLINK 账户。没有账户时，在 [登录页](https://nodylink.com/login) 用邮箱注册。
+- 账户里有可用余额。可以在 [充值中心](https://nodylink.com/dashboard/billing) 在线充值或使用兑换码。
 
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+## 发出第一条请求
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="创建 API Key">
+    打开 [控制台 → API 密钥](https://nodylink.com/dashboard/keys)，点击新建。密钥以 `sk-` 开头，只在创建时完整显示一次，请妥善保存。
+
+    <Warning>
+      不要把 API Key 写进前端代码或提交到代码仓库。建议放在环境变量中：
+
+      ```bash
+      export NODYLINK_API_KEY="sk-你的密钥"
+      ```
+    </Warning>
+  </Step>
+
+  <Step title="确认可用模型">
+    在 [模型广场](https://nodylink.com/market) 查看模型 ID 和单价，或者调用 [模型列表接口](/api-reference/models/list) 获取当前密钥可用的模型：
 
     ```bash
-    npm install your-package
+    curl https://api.nodylink.com/v1/models \
+      -H "Authorization: Bearer $NODYLINK_API_KEY"
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
+  <Step title="调用对话接口">
+    <CodeGroup>
+    ```bash cURL
+    curl https://api.nodylink.com/v1/chat/completions \
+      -H "Authorization: Bearer $NODYLINK_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "gpt-6",
+        "messages": [{"role": "user", "content": "你好"}]
+      }'
     ```
+
+    ```python Python
+    import os
+    from openai import OpenAI
+
+    client = OpenAI(
+        base_url="https://api.nodylink.com/v1",
+        api_key=os.environ["NODYLINK_API_KEY"],
+    )
+
+    resp = client.chat.completions.create(
+        model="gpt-6",
+        messages=[{"role": "user", "content": "你好"}],
+    )
+    print(resp.choices[0].message.content)
+    ```
+
+    ```javascript Node.js
+    import OpenAI from "openai";
+
+    const client = new OpenAI({
+      baseURL: "https://api.nodylink.com/v1",
+      apiKey: process.env.NODYLINK_API_KEY,
+    });
+
+    const resp = await client.chat.completions.create({
+      model: "gpt-6",
+      messages: [{ role: "user", content: "你好" }],
+    });
+    console.log(resp.choices[0].message.content);
+    ```
+    </CodeGroup>
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
 
-    ```bash
-    your-cli start
-    ```
+  <Step title="查看用量">
+    调用完成后，在 [使用日志](https://nodylink.com/dashboard/logs) 中可以看到这次请求的模型、token 数和扣费金额。
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## 生成图片和视频
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+图像和视频生成都是异步任务：提交后立即拿到任务 ID，再轮询查询接口获取结果。
+
+<CodeGroup>
+```bash 图片
+# 1. 提交任务
+curl https://api.nodylink.com/v1/images/generations \
+  -H "Authorization: Bearer $NODYLINK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "gpt-image-2", "prompt": "一只橘猫坐在窗台上看夕阳", "size": "1:1"}'
+
+# 2. 用返回的 task_id 查询结果
+curl https://api.nodylink.com/v1/images/tasks/<task_id> \
+  -H "Authorization: Bearer $NODYLINK_API_KEY"
+```
+
+```bash 视频
+# 1. 提交任务（请求体与火山方舟官方格式一致）
+curl https://api.nodylink.com/v2/videos/generations \
+  -H "Authorization: Bearer $NODYLINK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2-0-260128",
+    "content": [{"type": "text", "text": "小猫对着镜头打哈欠"}],
+    "ratio": "16:9",
+    "duration": 5
+  }'
+
+# 2. 用返回的 id 查询结果
+curl https://api.nodylink.com/v2/videos/generations/<task_id> \
+  -H "Authorization: Bearer $NODYLINK_API_KEY"
+```
+</CodeGroup>
+
+## 下一步
+
+<CardGroup cols={2}>
+  <Card title="对话接口" icon="message" href="/api-reference/texts/chat-completions">
+    流式输出、多轮对话、工具调用。
+  </Card>
+  <Card title="图像生成" icon="image" href="/api-reference/images/gpt-image-2">
+    文生图、图生图与参考图编辑。
+  </Card>
+  <Card title="视频生成" icon="video" href="/api-reference/videos/seedance/seedance-2-0">
+    文生视频、首尾帧、多模态参考。
+  </Card>
+  <Card title="错误码" icon="triangle-exclamation" href="/errors">
+    状态码含义与重试建议。
+  </Card>
+</CardGroup>

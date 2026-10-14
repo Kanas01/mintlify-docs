@@ -1,0 +1,211 @@
+---
+title: "获取模型列表"
+api: "GET /v1/models"
+description: "列出当前 API Key 可以调用的全部模型。"
+---
+
+返回结果只包含当前 API Key 有权访问的模型：如果密钥设置了模型白名单，只返回白名单内的模型；否则返回密钥所在分组下的全部可用模型。
+
+模型单价不在这个接口中返回，请查看 [模型价格](https://nodylink.com/pricing) 或 [模型广场](https://nodylink.com/market)。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/models \
+  -H "Authorization: Bearer sk-你的密钥"
+```
+
+```python Python
+from openai import OpenAI
+
+client = OpenAI(base_url="https://api.nodylink.com/v1", api_key="sk-你的密钥")
+
+for model in client.models.list():
+    print(model.id)
+```
+
+```javascript Node.js
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.nodylink.com/v1",
+  apiKey: "sk-你的密钥",
+});
+
+const models = await client.models.list();
+for (const model of models.data) {
+  console.log(model.id);
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "success": true,
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-6",
+      "object": "model",
+      "created": 1626777600,
+      "owned_by": "custom",
+      "supported_endpoint_types": ["openai", "openai-response"]
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "object": "model",
+      "created": 1626777600,
+      "owned_by": "custom",
+      "supported_endpoint_types": ["anthropic", "openai"]
+    },
+    {
+      "id": "gpt-image-2",
+      "object": "model",
+      "created": 1626777600,
+      "owned_by": "custom",
+      "supported_endpoint_types": ["image-generation"]
+    },
+    {
+      "id": "doubao-seedance-2-0-260128",
+      "object": "model",
+      "created": 1626777600,
+      "owned_by": "custom",
+      "supported_endpoint_types": ["openai-video"]
+    }
+  ]
+}
+```
+
+```json 401
+{
+  "error": {
+    "message": "无效的令牌 (request id: 2026101412000012345678)",
+    "type": "new_api_error",
+    "param": "",
+    "code": ""
+  }
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 响应
+
+<ResponseField name="success" type="boolean">
+  请求是否成功。
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  固定为 `list`。
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  模型列表。
+
+  <Expandable title="模型对象">
+    <ResponseField name="id" type="string">
+      模型 ID，调用接口时填在 `model` 字段中。
+    </ResponseField>
+    <ResponseField name="object" type="string">
+      固定为 `model`。
+    </ResponseField>
+    <ResponseField name="created" type="integer">
+      创建时间，Unix 时间戳（秒）。
+    </ResponseField>
+    <ResponseField name="owned_by" type="string">
+      模型归属方。
+    </ResponseField>
+    <ResponseField name="supported_endpoint_types" type="string[]">
+      模型支持的接口类型：
+
+      | 取值 | 对应接口 |
+      | - | - |
+      | `openai` | `/v1/chat/completions` |
+      | `openai-response` | `/v1/responses` |
+      | `anthropic` | `/v1/messages` |
+      | `gemini` | `/v1beta/models/{model}:generateContent` |
+      | `image-generation` | `/v1/images/generations` |
+      | `openai-video` | `/v2/videos/generations` |
+      | `embeddings` | `/v1/embeddings` |
+      | `jina-rerank` | `/v1/rerank` |
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## 其他格式
+
+使用 Anthropic 或 Gemini 官方 SDK 时，网关会按对应协议返回模型列表。
+
+<AccordionGroup>
+  <Accordion title="Anthropic 格式">
+    请求头同时带上 `x-api-key` 和 `anthropic-version` 时，返回 Anthropic 风格的列表：
+
+    ```bash
+    curl https://api.nodylink.com/v1/models \
+      -H "x-api-key: sk-你的密钥" \
+      -H "anthropic-version: 2023-06-01"
+    ```
+
+    ```json
+    {
+      "data": [
+        {
+          "id": "claude-sonnet-4-6",
+          "type": "model",
+          "display_name": "claude-sonnet-4-6",
+          "created_at": "2021-07-25T08:00:00Z"
+        }
+      ],
+      "first_id": "claude-sonnet-4-6",
+      "last_id": "claude-sonnet-4-6",
+      "has_more": false
+    }
+    ```
+  </Accordion>
+  <Accordion title="Gemini 格式">
+    请求 `GET /v1beta/models` 时返回 Gemini 风格的列表。鉴权可以用 `Authorization`、`x-goog-api-key` 请求头或 `key` 查询参数：
+
+    ```bash
+    curl "https://api.nodylink.com/v1beta/models?key=sk-你的密钥"
+    ```
+
+    ```json
+    {
+      "models": [
+        {
+          "name": "gemini-3.1-pro-preview",
+          "displayName": "gemini-3.1-pro-preview"
+        }
+      ],
+      "nextPageToken": null
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## 查询单个模型
+
+`GET /v1/models/{model}` 返回单个模型对象，包含 `id`、`object`、`created`、`owned_by` 字段。
+
+```bash
+curl https://api.nodylink.com/v1/models/gpt-6 \
+  -H "Authorization: Bearer sk-你的密钥"
+```
+
+模型不存在时，HTTP 状态码仍为 200，响应体为错误对象：
+
+```json
+{
+  "error": {
+    "message": "The model 'gpt-x' does not exist",
+    "type": "invalid_request_error",
+    "param": "model",
+    "code": "model_not_found"
+  }
+}
+```

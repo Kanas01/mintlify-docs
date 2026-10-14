@@ -1,0 +1,103 @@
+---
+title: "错误码"
+description: "HTTP 状态码、错误响应格式与重试建议。"
+---
+
+## 错误响应格式
+
+除异步任务提交失败外，所有接口的错误都使用 OpenAI 风格的错误体：
+
+```json
+{
+  "error": {
+    "message": "用户额度不足, 剩余额度: ¥0.012 (request id: 2026101412000012345678)",
+    "type": "new_api_error",
+    "param": "",
+    "code": "insufficient_user_quota"
+  }
+}
+```
+
+<ResponseField name="error.message" type="string">
+  可读的错误描述。末尾的 `(request id: ...)` 是本次请求的唯一 ID，反馈问题时请附上。
+</ResponseField>
+<ResponseField name="error.type" type="string">
+  错误来源。网关自身产生的错误为 `new_api_error`；上游模型返回的错误会保留上游的 `type`，例如 `invalid_request_error`。
+</ResponseField>
+<ResponseField name="error.code" type="string">
+  机器可读的错误码，见下文。部分错误没有错误码，此时为空字符串。
+</ResponseField>
+
+### 异步任务提交错误
+
+图像和视频任务在提交阶段出错时，返回下面的结构：
+
+```json
+{
+  "code": "invalid_duration",
+  "message": "duration must be -1 or a positive integer",
+  "data": null
+}
+```
+
+## HTTP 状态码
+
+| 状态码 | 含义 | 常见原因 | 处理建议 |
+| - | - | - | - |
+| `400` | 请求参数错误 | JSON 格式错误、缺少 `model`、参数取值超出范围 | 根据 `message` 修正请求，不要直接重试 |
+| `401` | 鉴权失败 | API Key 缺失、错误、已删除或已过期 | 检查 `Authorization` 请求头，必要时重新创建密钥 |
+| `403` | 无权访问 | 余额不足、密钥额度用尽、密钥无权访问该模型或分组、IP 不在白名单内 | 充值或调整密钥权限 |
+| `404` | 资源不存在 | 接口路径错误，或任务 ID 不存在 | 检查请求路径和任务 ID |
+| `429` | 请求过于频繁 | 触发频率限制，或当前分组上游负载已饱和 | 指数退避后重试 |
+| `500` | 服务内部错误 | 网关内部异常 | 稍后重试，持续出现请联系我们 |
+| `502` / `504` | 上游错误或超时 | 上游模型服务异常或响应超时 | 稍后重试 |
+| `503` | 暂无可用渠道 | 当前分组下该模型没有可用线路，或模型 ID 不存在 | 确认模型 ID，或稍后重试 |
+
+<Note>
+  网关会在多条上游线路之间自动重试 429 和 5xx 错误。只有所有线路都失败时，错误才会返回给调用方。
+</Note>
+
+## 常见错误码
+
+| 错误码 | 状态码 | 说明 |
+| - | - | - |
+| `insufficient_user_quota` | 403 | 账户余额不足，请前往 [充值中心](https://nodylink.com/dashboard/billing) 充值 |
+| `pre_consume_token_quota_failed` | 403 | 当前 API Key 的额度已用完，可在 [API 密钥](https://nodylink.com/dashboard/keys) 中调高额度 |
+| `access_denied` | 403 | 请求来源 IP 不在密钥允许的列表中 |
+| `model_not_found` | 503 | 当前分组下没有该模型的可用线路 |
+| `invalid_request` | 400 | 请求体无法解析或参数校验失败 |
+| `missing_model` | 400 | 异步任务请求缺少 `model` 字段 |
+| `invalid_duration` | 400 | 视频任务的 `duration` 取值不合法 |
+| `sensitive_words_detected` | 400 | 输入内容命中敏感词 |
+| `prompt_blocked` | 400 | 提示词被上游安全策略拦截 |
+| `bad_response_status_code` | 上游状态码 | 上游返回了非成功状态码 |
+| `do_request_failed` | 500 | 请求上游失败 |
+| `channel:response_time_exceeded` | 504 | 上游响应超时 |
+| `task_not_found` | 404 | 查询的图片任务不存在，或不属于当前账户 |
+| `task_not_exist` | 400 | 查询的视频任务不存在，或不属于当前账户 |
+
+## 重试建议
+
+```python
+import time
+import random
+from openai import OpenAI, APIStatusError
+
+client = OpenAI(base_url="https://api.nodylink.com/v1", api_key="sk-你的密钥")
+
+def chat_with_retry(messages, max_retries=4):
+    for attempt in range(max_retries):
+        try:
+            return client.chat.completions.create(model="gpt-6", messages=messages)
+        except APIStatusError as e:
+            # 400 / 401 / 403 / 404 重试无意义，直接抛出
+            if e.status_code < 500 and e.status_code != 429:
+                raise
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt + random.random())
+```
+
+<Tip>
+  OpenAI 官方 SDK 默认会对 429 和 5xx 自动重试 2 次，可以通过 `max_retries` 参数调整。
+</Tip>

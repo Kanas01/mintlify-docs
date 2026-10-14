@@ -1,53 +1,117 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "NODYLINK 文档",
+  "description": "NODYLINK 模型网关接入文档：文本、图像、视频模型共用一套接口、一个密钥和一份账单。",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0A0A0A",
+    "light": "#FFFFFF",
+    "dark": "#0A0A0A"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.png",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png",
+    "href": "https://nodylink.com"
+  },
+  "api": {
+    "mdx": {
+      "server": "https://api.nodylink.com",
+      "auth": {
+        "method": "bearer"
+      }
+    },
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "autogenerate": false
+    }
+  },
   "navigation": {
-    "pages": [
+    "languages": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "language": "zh",
+        "groups": [
+          {
+            "group": "概览",
+            "pages": [
+              "index",
+              "quickstart",
+              "errors"
+            ]
+          },
+          {
+            "group": "模型",
+            "pages": [
+              "api-reference/models/list"
+            ]
+          },
+          {
+            "group": "文本对话系列",
+            "pages": [
+              "api-reference/texts/chat-completions",
+              "api-reference/texts/chat-completions-nostream",
+              "api-reference/texts/claude-messages",
+              "api-reference/texts/gemini-native",
+              "api-reference/texts/responses",
+              "api-reference/texts/claude-context-cache"
+            ]
+          },
+          {
+            "group": "图片系列",
+            "pages": [
+              "api-reference/images/gpt-image-2",
+              "api-reference/images/gpt-image-2-5",
+              "api-reference/images/gemini-3-pro-image",
+              "api-reference/images/gemini-3-1-flash-image",
+              "api-reference/images/gemini-nano-banana-2-1",
+              "api-reference/images/task-status"
+            ]
+          },
+          {
+            "group": "视频系列",
+            "pages": [
+              {
+                "group": "Doubao Seedance",
+                "icon": "video",
+                "pages": [
+                  "api-reference/videos/seedance/seedance-2-5",
+                  "api-reference/videos/seedance/seedance-2-0",
+                  "api-reference/videos/task-status"
+                ]
+              }
+            ]
+          }
         ]
       }
     ],
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "控制台",
+          "href": "https://nodylink.com/dashboard",
+          "icon": "gauge"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "模型价格",
+          "href": "https://nodylink.com/pricing",
+          "icon": "tag"
         }
       ]
     }
   },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:support@mintlify.com"
+        "label": "模型广场",
+        "href": "https://nodylink.com/market"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "label": "获取 API Key",
+      "href": "https://nodylink.com/dashboard/keys"
     }
   },
   "contextual": {
@@ -56,17 +120,29 @@
       "view",
       "chatgpt",
       "claude",
-      "perplexity",
-      "mcp",
       "cursor",
       "vscode"
     ]
   },
   "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    "links": [
+      {
+        "header": "NODYLINK",
+        "items": [
+          {
+            "label": "官网",
+            "href": "https://nodylink.com"
+          },
+          {
+            "label": "服务条款",
+            "href": "https://nodylink.com/terms"
+          },
+          {
+            "label": "隐私政策",
+            "href": "https://nodylink.com/privacy"
+          }
+        ]
+      }
+    ]
   }
 }

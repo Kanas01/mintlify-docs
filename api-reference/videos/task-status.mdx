@@ -1,0 +1,193 @@
+---
+title: "查询视频任务"
+api: "GET /v2/videos/generations/{task_id}"
+description: "查询 Seedance 视频生成任务的状态和结果。"
+---
+
+视频生成接口提交后返回任务 `id`，用本接口轮询任务状态。任务成功后，视频链接在 `data` 中。
+
+- 视频生成通常需要 1～10 分钟，建议每 10 秒左右查询一次。
+- 只能查询当前账户提交的任务。
+- 视频链接可能会过期，拿到后请及时下载转存。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v2/videos/generations/6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36 \
+  -H "Authorization: Bearer sk-你的密钥"
+```
+
+```python Python
+import requests
+
+resp = requests.get(
+    "https://api.nodylink.com/v2/videos/generations/6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+    headers={"Authorization": "Bearer sk-你的密钥"},
+)
+print(resp.json())
+```
+
+```javascript Node.js
+const resp = await fetch(
+  "https://api.nodylink.com/v2/videos/generations/6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  { headers: { Authorization: "Bearer sk-你的密钥" } },
+);
+console.log(await resp.json());
+```
+</RequestExample>
+
+<ResponseExample>
+```json 成功
+{
+  "task_id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  "action": "textGenerate",
+  "status": "SUCCESS",
+  "fail_reason": "",
+  "submit_time": 1792000000,
+  "start_time": 1792000005,
+  "finish_time": 1792000180,
+  "progress": "100%",
+  "data": {
+    "task": {
+      "id": "cgt-20261014144800-x7k2m",
+      "status": "succeeded",
+      "model": "doubao-seedance-2-0-260128",
+      "outputs": [
+        "https://example.com/generated/6b2f8d1e.mp4"
+      ],
+      "usage": {
+        "completion_tokens": 108900,
+        "total_tokens": 108900
+      }
+    }
+  }
+}
+```
+
+```json 进行中
+{
+  "task_id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  "action": "textGenerate",
+  "status": "IN_PROGRESS",
+  "fail_reason": "",
+  "submit_time": 1792000000,
+  "start_time": 1792000005,
+  "finish_time": 0,
+  "progress": "50%",
+  "data": null
+}
+```
+
+```json 失败
+{
+  "task_id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  "action": "generate",
+  "status": "FAILURE",
+  "fail_reason": "The request failed because the input image may contain real person.",
+  "submit_time": 1792000000,
+  "start_time": 1792000005,
+  "finish_time": 1792000040,
+  "progress": "100%",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。需要与提交任务时属于同一账户。
+</ParamField>
+
+## 路径参数
+
+<ParamField path="task_id" type="string" required>
+  视频生成接口返回的 `id`。
+</ParamField>
+
+## 响应
+
+<ResponseField name="task_id" type="string">
+  任务 ID。
+</ResponseField>
+
+<ResponseField name="action" type="string">
+  任务类型：`textGenerate` 表示纯文生视频，`generate` 表示包含图片、视频或音频参考。
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  任务状态：
+
+  | 状态 | 含义 |
+  | - | - |
+  | `NOT_START` | 任务已创建，尚未提交到上游 |
+  | `SUBMITTED` | 已提交到上游 |
+  | `QUEUED` | 上游排队中 |
+  | `IN_PROGRESS` | 生成中 |
+  | `SUCCESS` | 成功，`data` 中包含视频链接 |
+  | `FAILURE` | 失败，原因见 `fail_reason`，费用已自动退回 |
+</ResponseField>
+
+<ResponseField name="fail_reason" type="string">
+  失败原因。非失败状态下为空字符串。
+</ResponseField>
+
+<ResponseField name="submit_time" type="integer">
+  提交时间，Unix 时间戳（秒）。
+</ResponseField>
+
+<ResponseField name="start_time" type="integer">
+  开始生成时间，Unix 时间戳（秒）。未开始时为 `0`。
+</ResponseField>
+
+<ResponseField name="finish_time" type="integer">
+  完成时间，Unix 时间戳（秒）。未完成时为 `0`。
+</ResponseField>
+
+<ResponseField name="progress" type="string">
+  任务进度，例如 `50%`。
+</ResponseField>
+
+<ResponseField name="data" type="object | null">
+  上游返回的任务结果，任务完成前可能为 `null`。视频链接的位置有两种：
+
+  | 位置 | 说明 |
+  | - | - |
+  | `data.task.outputs[0]` | 视频链接，大多数线路使用这种格式 |
+  | `data.task.usage` | token 用量 |
+  | `data.task.last_frame_url` | 尾帧图片，请求时设置了 `return_last_frame` 才有 |
+  | `data.content.video_url` | 视频链接，火山方舟原始格式 |
+  | `data.content.last_frame_url` | 尾帧图片，火山方舟原始格式 |
+
+  建议两种格式都做兼容，取第一个非空值。
+</ResponseField>
+
+## 提取视频链接
+
+<CodeGroup>
+```python Python
+def extract_result(data: dict) -> tuple[str | None, str | None]:
+    """返回 (视频链接, 尾帧链接)"""
+    if not data:
+        return None, None
+    task = data.get("task") or {}
+    content = data.get("content") or {}
+    video = (task.get("outputs") or [None])[0] or content.get("video_url")
+    last_frame = task.get("last_frame_url") or content.get("last_frame_url")
+    return video, last_frame
+```
+
+```javascript Node.js
+function extractResult(data) {
+  const video = data?.task?.outputs?.[0] ?? data?.content?.video_url ?? null;
+  const lastFrame = data?.task?.last_frame_url ?? data?.content?.last_frame_url ?? null;
+  return { video, lastFrame };
+}
+```
+</CodeGroup>
+
+## 错误响应
+
+| 状态码 | 说明 |
+| - | - |
+| `400` | 任务不存在，或不属于当前账户，响应为 `{"code": "task_not_exist", "message": "task_not_exist", "data": null}` |
+| `401` | API Key 无效 |

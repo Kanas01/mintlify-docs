@@ -1,0 +1,312 @@
+---
+title: "对话补全（非流式）"
+api: "POST /v1/chat/completions"
+description: "兼容 OpenAI Chat Completions 协议，生成完成后一次性返回完整结果。"
+---
+
+- 不传 `stream` 或设为 `false` 时，接口在模型生成完毕后一次性返回完整 JSON。
+- 请求参数与 [对话补全（流式）](/api-reference/texts/chat-completions) 完全相同，本页只列出常用参数，并补充图片理解、工具调用和结构化输出的示例。
+- 生成较长内容时建议使用流式，避免客户端或代理层超时。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/chat/completions \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-6",
+    "messages": [
+      {"role": "system", "content": "你是一个专业的 AI 助手。"},
+      {"role": "user", "content": "用一句话介绍你自己。"}
+    ]
+  }'
+```
+
+```python Python
+from openai import OpenAI
+
+client = OpenAI(base_url="https://api.nodylink.com/v1", api_key="sk-你的密钥")
+
+resp = client.chat.completions.create(
+    model="gpt-6",
+    messages=[
+        {"role": "system", "content": "你是一个专业的 AI 助手。"},
+        {"role": "user", "content": "用一句话介绍你自己。"},
+    ],
+)
+
+print(resp.choices[0].message.content)
+print(resp.usage)
+```
+
+```javascript Node.js
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.nodylink.com/v1",
+  apiKey: "sk-你的密钥",
+});
+
+const resp = await client.chat.completions.create({
+  model: "gpt-6",
+  messages: [
+    { role: "system", content: "你是一个专业的 AI 助手。" },
+    { role: "user", content: "用一句话介绍你自己。" },
+  ],
+});
+
+console.log(resp.choices[0].message.content);
+console.log(resp.usage);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "chatcmpl-9f3b2c1a",
+  "object": "chat.completion",
+  "created": 1792000000,
+  "model": "gpt-6",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "我是一个 AI 助手，可以帮你解答问题、写作和分析数据。"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 27,
+    "completion_tokens": 21,
+    "total_tokens": 48,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}
+```
+
+```json 401
+{
+  "error": {
+    "message": "无效的令牌 (request id: 2026101412000012345678)",
+    "type": "new_api_error",
+    "param": "",
+    "code": ""
+  }
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required>
+  模型 ID。可用模型以 [模型广场](https://nodylink.com/market) 为准。
+</ParamField>
+
+<ParamField body="messages" type="array" required>
+  对话消息列表。每条消息包含 `role`（`system`、`developer`、`user`、`assistant`、`tool`）和 `content`。
+</ParamField>
+
+<ParamField body="stream" type="boolean" default="false">
+  不传或设为 `false`，返回完整 JSON。
+</ParamField>
+
+<ParamField body="temperature" type="number">
+  采样温度，取值 0 到 2。
+</ParamField>
+
+<ParamField body="max_tokens" type="integer">
+  生成内容的最大 token 数。
+</ParamField>
+
+<ParamField body="tools" type="array">
+  模型可以调用的函数列表。
+</ParamField>
+
+<ParamField body="response_format" type="object">
+  输出格式，支持 `json_object` 和 `json_schema`。
+</ParamField>
+
+完整参数列表见 [对话补全（流式）](/api-reference/texts/chat-completions)。
+
+## 响应
+
+<ResponseField name="id" type="string">
+  本次补全的唯一 ID。
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  固定为 `chat.completion`。
+</ResponseField>
+
+<ResponseField name="created" type="integer">
+  创建时间，Unix 时间戳（秒）。
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  实际使用的模型。
+</ResponseField>
+
+<ResponseField name="choices" type="array">
+  候选回复列表。
+
+  <Expandable title="属性">
+    <ResponseField name="index" type="integer">
+      候选回复的序号。
+    </ResponseField>
+    <ResponseField name="message" type="object">
+      模型回复。
+
+      <Expandable title="属性">
+        <ResponseField name="role" type="string">
+          固定为 `assistant`。
+        </ResponseField>
+        <ResponseField name="content" type="string | null">
+          回复正文。只发起工具调用时可能为 `null`。
+        </ResponseField>
+        <ResponseField name="reasoning_content" type="string">
+          推理过程，仅部分推理模型返回。
+        </ResponseField>
+        <ResponseField name="tool_calls" type="array">
+          模型发起的工具调用，每项包含 `id`、`type` 和 `function`（`name` 与 JSON 字符串形式的 `arguments`）。
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="finish_reason" type="string">
+      结束原因：`stop`、`length`、`tool_calls` 或 `content_filter`。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="object">
+  token 用量，计费以此为准。
+
+  <Expandable title="属性">
+    <ResponseField name="prompt_tokens" type="integer">
+      输入 token 数，包含命中缓存的部分。
+    </ResponseField>
+    <ResponseField name="completion_tokens" type="integer">
+      输出 token 数，包含推理 token。
+    </ResponseField>
+    <ResponseField name="total_tokens" type="integer">
+      输入与输出 token 之和。
+    </ResponseField>
+    <ResponseField name="prompt_tokens_details.cached_tokens" type="integer">
+      命中缓存的输入 token 数，按缓存价格计费。
+    </ResponseField>
+    <ResponseField name="completion_tokens_details.reasoning_tokens" type="integer">
+      推理 token 数。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## 使用示例
+
+### 多轮对话
+
+把历史消息按顺序放进 `messages`，模型会基于上下文回答：
+
+```json
+{
+  "model": "gpt-6",
+  "messages": [
+    {"role": "user", "content": "我叫小李。"},
+    {"role": "assistant", "content": "你好，小李！有什么可以帮你？"},
+    {"role": "user", "content": "我叫什么名字？"}
+  ]
+}
+```
+
+### 图片理解
+
+支持视觉的模型可以在 `content` 数组中传入图片。`url` 可以是公网链接，也可以是 `data:image/png;base64,...` 格式的 Base64 数据：
+
+```python
+resp = client.chat.completions.create(
+    model="gpt-6",
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "这张图片里有什么？"},
+                {"type": "image_url", "image_url": {"url": "https://example.com/cat.png"}},
+            ],
+        }
+    ],
+)
+```
+
+### 工具调用
+
+```python
+import json
+
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "查询指定城市的实时天气",
+            "parameters": {
+                "type": "object",
+                "properties": {"city": {"type": "string", "description": "城市名称"}},
+                "required": ["city"],
+            },
+        },
+    }
+]
+
+messages = [{"role": "user", "content": "北京今天天气怎么样？"}]
+resp = client.chat.completions.create(model="gpt-6", messages=messages, tools=tools)
+
+call = resp.choices[0].message.tool_calls[0]
+args = json.loads(call.function.arguments)  # {"city": "北京"}
+
+# 执行函数后，把结果作为 tool 消息回传
+messages.append(resp.choices[0].message)
+messages.append({"role": "tool", "tool_call_id": call.id, "content": "晴，22℃"})
+
+final = client.chat.completions.create(model="gpt-6", messages=messages, tools=tools)
+print(final.choices[0].message.content)
+```
+
+### 结构化输出
+
+```python
+resp = client.chat.completions.create(
+    model="gpt-6",
+    messages=[{"role": "user", "content": "提取信息：张三，28 岁，上海"}],
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "person",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "age": {"type": "integer"},
+                    "city": {"type": "string"},
+                },
+                "required": ["name", "age", "city"],
+            },
+        },
+    },
+)
+print(resp.choices[0].message.content)  # {"name":"张三","age":28,"city":"上海"}
+```
+
+<Note>
+  工具调用和结构化输出的支持程度取决于具体模型，请在 [模型广场](https://nodylink.com/market) 查看模型能力。
+</Note>

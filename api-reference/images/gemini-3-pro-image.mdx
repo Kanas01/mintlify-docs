@@ -1,0 +1,210 @@
+---
+title: "Gemini 3 Pro Image"
+api: "POST /v1/images/generations"
+description: "Google Gemini 3 Pro Image（Nano Banana Pro）图像生成，擅长文字渲染与多图融合。"
+---
+
+- 异步接口：提交后立即返回 `task_id`，再调用 [查询图片任务](/api-reference/images/task-status) 获取结果。
+- 不传 `image_urls` 为文生图；传入 `image_urls` 为图生图 / 图像编辑。
+- 按张计费，单价由分辨率档位（1K / 2K / 4K）决定，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/images/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-3-pro-image",
+    "prompt": "一张咖啡店开业海报，标题写着「秋日限定」，暖色调，扁平插画风格",
+    "size": "3:4",
+    "resolution": "2K"
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v1/images/generations",
+    headers=headers,
+    json={
+        "model": "gemini-3-pro-image",
+        "prompt": "一张咖啡店开业海报，标题写着「秋日限定」，暖色调，扁平插画风格",
+        "size": "3:4",
+        "resolution": "2K",
+    },
+).json()
+task_id = submit["task_id"]
+
+while True:
+    task = requests.get(f"{BASE}/v1/images/tasks/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(task["data"][0]["url"])
+        break
+    if task["status"] == "FAILED":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(5)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v1/images/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "gemini-3-pro-image",
+    prompt: "一张咖啡店开业海报，标题写着「秋日限定」，暖色调，扁平插画风格",
+    size: "3:4",
+    resolution: "2K",
+  }),
+}).then((r) => r.json());
+
+while (true) {
+  const task = await fetch(`${BASE}/v1/images/tasks/${submit.task_id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(task.data[0].url);
+    break;
+  }
+  if (task.status === "FAILED") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 5000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "code": 200,
+  "status": "submitted",
+  "task_id": "c27e9f10-4a8b-4d3c-b615-0e9a2f7d4b81",
+  "id": "c27e9f10-4a8b-4d3c-b615-0e9a2f7d4b81"
+}
+```
+
+```json 400
+{
+  "code": "invalid_request",
+  "message": "prompt is required",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required default="gemini-3-pro-image">
+  模型 ID，填 `gemini-3-pro-image`。兼容别名 `gemini-3-pro-image-preview`、`nano-banana-pro`。
+</ParamField>
+
+<ParamField body="prompt" type="string" required>
+  图像描述，支持中英文。需要在图中渲染文字时，把文字内容用引号标出效果更好。
+</ParamField>
+
+<ParamField body="size" type="string">
+  输出宽高比：`1:1`、`2:3`、`3:2`、`3:4`、`4:3`、`4:5`、`5:4`、`9:16`、`16:9`、`21:9`。
+
+  不传时，文生图由模型决定比例，图生图跟随参考图比例。建议显式指定。
+</ParamField>
+
+<ParamField body="aspect_ratio" type="string">
+  宽高比，取值同 `size`。与 `size` 同时传入时以 `aspect_ratio` 为准。
+</ParamField>
+
+<ParamField body="resolution" type="string" default="1K">
+  分辨率档位：`1K`、`2K` 或 `4K`，大小写均可。同时决定计费档位。
+</ParamField>
+
+<ParamField body="image_urls" type="string[]">
+  参考图列表，用于图生图或图像编辑。也可以用 `image` 或 `images` 字段传入。
+
+  <Expandable title="详细说明">
+    每项支持三种格式：
+
+    - 公网可访问的图片 URL，例如 `https://example.com/image.jpg`
+    - Data URL，例如 `data:image/jpeg;base64,/9j/4AAQ...`
+    - 纯 Base64 字符串
+
+    建议使用 JPEG、PNG 或 WEBP，最多 14 张。
+  </Expandable>
+</ParamField>
+
+## 提交响应
+
+<ResponseField name="code" type="integer">
+  固定为 `200`。
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  固定为 `submitted`。
+</ResponseField>
+
+<ResponseField name="task_id" type="string">
+  任务 ID，用于 [查询图片任务](/api-reference/images/task-status)。
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  与 `task_id` 相同。
+</ResponseField>
+
+## 使用示例
+
+**图像编辑**
+
+```json
+{
+  "model": "gemini-3-pro-image",
+  "prompt": "给画面里的猫戴上一顶红色毛线帽，其余保持不变",
+  "image_urls": ["https://example.com/cat.jpg"],
+  "resolution": "2K"
+}
+```
+
+**多图融合**
+
+```json
+{
+  "model": "gemini-3-pro-image",
+  "prompt": "让第一张图的人物穿上第二张图的外套，站在第三张图的街道上",
+  "image_urls": [
+    "https://example.com/person.jpg",
+    "https://example.com/jacket.jpg",
+    "https://example.com/street.jpg"
+  ],
+  "aspect_ratio": "9:16",
+  "resolution": "4K"
+}
+```
+
+## 查询结果
+
+```json
+{
+  "status": "SUCCESS",
+  "task_id": "c27e9f10-4a8b-4d3c-b615-0e9a2f7d4b81",
+  "progress": "100%",
+  "created": 1792000045,
+  "data": [
+    {"url": "https://example.com/generated/c27e9f10.png"}
+  ]
+}
+```
+
+取图方式：`data[0].url`。状态说明见 [查询图片任务](/api-reference/images/task-status)。

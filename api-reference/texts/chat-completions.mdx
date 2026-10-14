@@ -1,0 +1,280 @@
+---
+title: "对话补全（流式）"
+api: "POST /v1/chat/completions"
+description: "兼容 OpenAI Chat Completions 协议，通过 SSE 逐段返回生成内容。"
+---
+
+- 统一的对话接口，支持平台上所有文本模型，包括 GPT、Claude、Gemini、DeepSeek 等，通过 `model` 参数切换。
+- 与 OpenAI Chat Completions 协议兼容，可以直接使用 OpenAI 官方 SDK。
+- 设置 `"stream": true` 后以 Server-Sent Events 流式返回；不设置时默认非流式，见 [对话补全（非流式）](/api-reference/texts/chat-completions-nostream)。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/chat/completions \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -N \
+  -d '{
+    "model": "gpt-6",
+    "messages": [
+      {"role": "system", "content": "你是一个专业的 AI 助手。"},
+      {"role": "user", "content": "介绍一下人工智能的发展历史。"}
+    ],
+    "stream": true,
+    "stream_options": {"include_usage": true}
+  }'
+```
+
+```python Python
+from openai import OpenAI
+
+client = OpenAI(base_url="https://api.nodylink.com/v1", api_key="sk-你的密钥")
+
+stream = client.chat.completions.create(
+    model="gpt-6",
+    messages=[
+        {"role": "system", "content": "你是一个专业的 AI 助手。"},
+        {"role": "user", "content": "介绍一下人工智能的发展历史。"},
+    ],
+    stream=True,
+    stream_options={"include_usage": True},
+)
+
+for chunk in stream:
+    if chunk.choices and chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+    if chunk.usage:
+        print("\n用量:", chunk.usage)
+```
+
+```javascript Node.js
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.nodylink.com/v1",
+  apiKey: "sk-你的密钥",
+});
+
+const stream = await client.chat.completions.create({
+  model: "gpt-6",
+  messages: [
+    { role: "system", content: "你是一个专业的 AI 助手。" },
+    { role: "user", content: "介绍一下人工智能的发展历史。" },
+  ],
+  stream: true,
+  stream_options: { include_usage: true },
+});
+
+for await (const chunk of stream) {
+  const delta = chunk.choices[0]?.delta?.content;
+  if (delta) process.stdout.write(delta);
+  if (chunk.usage) console.log("\n用量:", chunk.usage);
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```text 200
+data: {"id":"chatcmpl-9f3b2c1a","object":"chat.completion.chunk","created":1792000000,"model":"gpt-6","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-9f3b2c1a","object":"chat.completion.chunk","created":1792000000,"model":"gpt-6","choices":[{"index":0,"delta":{"content":"人工智能"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-9f3b2c1a","object":"chat.completion.chunk","created":1792000000,"model":"gpt-6","choices":[{"index":0,"delta":{"content":"的发展可以追溯到 1950 年代……"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-9f3b2c1a","object":"chat.completion.chunk","created":1792000000,"model":"gpt-6","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-9f3b2c1a","object":"chat.completion.chunk","created":1792000000,"model":"gpt-6","choices":[],"usage":{"prompt_tokens":28,"completion_tokens":412,"total_tokens":440}}
+
+data: [DONE]
+```
+
+```json 400
+{
+  "error": {
+    "message": "未指定模型名称，模型名称不能为空 (request id: 2026101412000012345678)",
+    "type": "new_api_error",
+    "param": "",
+    "code": ""
+  }
+}
+```
+
+```json 403
+{
+  "error": {
+    "message": "用户额度不足, 剩余额度: ¥0.012 (request id: 2026101412000012345678)",
+    "type": "new_api_error",
+    "param": "",
+    "code": "insufficient_user_quota"
+  }
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required>
+  模型 ID，例如 `gpt-6`、`claude-sonnet-4-6`、`gemini-3.1-pro-preview`。可用模型以 [模型广场](https://nodylink.com/market) 和 [模型列表接口](/api-reference/models/list) 为准。
+</ParamField>
+
+<ParamField body="messages" type="array" required>
+  对话消息列表，按时间顺序排列。
+
+  <Expandable title="消息对象">
+    <ParamField body="role" type="string" required>
+      消息角色：`system`、`developer`、`user`、`assistant` 或 `tool`。
+    </ParamField>
+    <ParamField body="content" type="string | array" required>
+      消息内容。纯文本直接传字符串；包含图片等多模态内容时传数组，例如：
+
+      ```json
+      [
+        {"type": "text", "text": "图里有什么？"},
+        {"type": "image_url", "image_url": {"url": "https://example.com/cat.png"}}
+      ]
+      ```
+    </ParamField>
+    <ParamField body="name" type="string">
+      参与者名称，用于区分同一角色下的不同发言者。
+    </ParamField>
+    <ParamField body="tool_calls" type="array">
+      `assistant` 消息中模型发起的工具调用，多轮工具调用时原样回传。
+    </ParamField>
+    <ParamField body="tool_call_id" type="string">
+      `tool` 消息对应的工具调用 ID。
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="stream" type="boolean" default="false">
+  是否流式返回。设为 `true` 时以 `text/event-stream` 返回，每个事件以 `data: ` 开头，最后以 `data: [DONE]` 结束。
+</ParamField>
+
+<ParamField body="stream_options" type="object">
+  流式选项，仅 `stream` 为 `true` 时生效。
+
+  <Expandable title="属性">
+    <ParamField body="include_usage" type="boolean">
+      为 `true` 时，在 `[DONE]` 之前额外发送一个 `choices` 为空、带 `usage` 的数据块。
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="temperature" type="number">
+  采样温度，取值 0 到 2。值越高输出越随机，值越低越确定。不建议与 `top_p` 同时调整。
+</ParamField>
+
+<ParamField body="top_p" type="number">
+  核采样阈值，取值 0 到 1。例如 0.1 表示只从累计概率前 10% 的 token 中采样。
+</ParamField>
+
+<ParamField body="max_tokens" type="integer">
+  生成内容的最大 token 数。推理模型建议改用 `max_completion_tokens`。
+</ParamField>
+
+<ParamField body="max_completion_tokens" type="integer">
+  生成内容（含推理 token）的最大 token 数。
+</ParamField>
+
+<ParamField body="reasoning_effort" type="string">
+  推理强度，适用于支持推理的模型。常用取值：`low`、`medium`、`high`。
+</ParamField>
+
+<ParamField body="stop" type="string | string[]">
+  停止序列，最多 4 个。生成内容遇到其中任意一个时停止。
+</ParamField>
+
+<ParamField body="n" type="integer" default="1">
+  为每条输入生成的候选回复数量。部分模型只支持 1。
+</ParamField>
+
+<ParamField body="presence_penalty" type="number">
+  存在惩罚，取值 -2.0 到 2.0。正值鼓励模型谈论新话题。
+</ParamField>
+
+<ParamField body="frequency_penalty" type="number">
+  频率惩罚，取值 -2.0 到 2.0。正值降低逐字重复的概率。
+</ParamField>
+
+<ParamField body="seed" type="integer">
+  随机种子。相同种子和参数下，模型会尽量返回相同结果。
+</ParamField>
+
+<ParamField body="tools" type="array">
+  模型可以调用的工具列表，目前支持 `function` 类型。用法见 [对话补全（非流式）](/api-reference/texts/chat-completions-nostream) 中的工具调用示例。
+
+  <Expandable title="工具对象">
+    <ParamField body="type" type="string" required>
+      固定为 `function`。
+    </ParamField>
+    <ParamField body="function" type="object" required>
+      函数定义，包含 `name`、`description` 和 JSON Schema 格式的 `parameters`。
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="tool_choice" type="string | object">
+  工具调用策略：`none` 不调用、`auto` 由模型决定、`required` 必须调用，或通过 `{"type": "function", "function": {"name": "..."}}` 指定函数。
+</ParamField>
+
+<ParamField body="parallel_tool_calls" type="boolean">
+  是否允许模型在一次回复中并行发起多个工具调用。
+</ParamField>
+
+<ParamField body="response_format" type="object">
+  输出格式。`{"type": "json_object"}` 输出合法 JSON；`{"type": "json_schema", "json_schema": {...}}` 按给定 Schema 输出。
+</ParamField>
+
+<ParamField body="user" type="string">
+  终端用户标识，用于上游的滥用监控。
+</ParamField>
+
+## 流式响应
+
+每个 SSE 事件的 `data` 是一个 `chat.completion.chunk` 对象。
+
+<ResponseField name="id" type="string">
+  本次补全的唯一 ID，同一次请求的所有数据块相同。
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  固定为 `chat.completion.chunk`。
+</ResponseField>
+
+<ResponseField name="created" type="integer">
+  创建时间，Unix 时间戳（秒）。
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  实际使用的模型。
+</ResponseField>
+
+<ResponseField name="choices" type="array">
+  增量内容列表。
+
+  <Expandable title="属性">
+    <ResponseField name="index" type="integer">
+      候选回复的序号。
+    </ResponseField>
+    <ResponseField name="delta" type="object">
+      本次新增的内容，可能包含 `role`、`content`、`reasoning_content`（推理过程）和 `tool_calls`。
+    </ResponseField>
+    <ResponseField name="finish_reason" type="string | null">
+      结束原因，只在最后一个内容块中出现：`stop` 正常结束、`length` 达到长度上限、`tool_calls` 发起了工具调用、`content_filter` 被内容审核拦截。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="object | null">
+  token 用量，只在开启 `stream_options.include_usage` 后的最后一个数据块中出现。字段含义见 [对话补全（非流式）](/api-reference/texts/chat-completions-nostream)。
+</ResponseField>
+
+<Note>
+  鉴权失败、余额不足、参数错误等问题在流开始前就会被发现，此时返回普通的 JSON 错误体和对应的 HTTP 状态码，而不是 SSE 流。
+</Note>

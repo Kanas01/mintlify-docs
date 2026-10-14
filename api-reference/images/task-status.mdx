@@ -1,0 +1,142 @@
+---
+title: "查询图片任务"
+api: "GET /v1/images/tasks/{task_id}"
+description: "查询图片生成任务的状态和结果。"
+---
+
+图片生成接口提交后返回 `task_id`，用本接口轮询任务状态。任务成功后，图片链接在 `data[].url` 中。
+
+- 建议每 3～5 秒查询一次。任务完成前，服务端会在查询时主动向上游同步最新状态。
+- 只能查询当前账户提交的任务。
+- 图片链接可能会过期，拿到后请及时下载转存。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/images/tasks/3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34 \
+  -H "Authorization: Bearer sk-你的密钥"
+```
+
+```python Python
+import requests
+
+resp = requests.get(
+    "https://api.nodylink.com/v1/images/tasks/3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+    headers={"Authorization": "Bearer sk-你的密钥"},
+)
+print(resp.json())
+```
+
+```javascript Node.js
+const resp = await fetch(
+  "https://api.nodylink.com/v1/images/tasks/3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  { headers: { Authorization: "Bearer sk-你的密钥" } },
+);
+console.log(await resp.json());
+```
+</RequestExample>
+
+<ResponseExample>
+```json 成功
+{
+  "status": "SUCCESS",
+  "task_id": "3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  "progress": "100%",
+  "created": 1792000060,
+  "data": [
+    {"url": "https://example.com/generated/3f6c1b2a.png"}
+  ]
+}
+```
+
+```json 进行中
+{
+  "status": "IN_PROGRESS",
+  "task_id": "3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  "progress": "50%",
+  "created": 1792000020
+}
+```
+
+```json 失败
+{
+  "status": "FAILED",
+  "task_id": "3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  "fail_reason": "The prompt was blocked by the safety system.",
+  "created": 1792000030
+}
+```
+
+```json 404
+{
+  "error": {
+    "message": "Task not found",
+    "type": "invalid_request_error",
+    "code": "task_not_found"
+  }
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。需要与提交任务时属于同一账户。
+</ParamField>
+
+## 路径参数
+
+<ParamField path="task_id" type="string" required>
+  图片生成接口返回的 `task_id`。
+</ParamField>
+
+## 响应
+
+<ResponseField name="status" type="string">
+  任务状态：
+
+  | 状态 | 含义 |
+  | - | - |
+  | `NOT_START` | 任务已创建，尚未提交到上游 |
+  | `SUBMITTED` | 已提交到上游 |
+  | `QUEUED` | 上游排队中 |
+  | `IN_PROGRESS` | 生成中 |
+  | `SUCCESS` | 成功，`data` 可用 |
+  | `FAILED` | 失败，原因见 `fail_reason`，费用已自动退回 |
+</ResponseField>
+
+<ResponseField name="task_id" type="string">
+  任务 ID。
+</ResponseField>
+
+<ResponseField name="progress" type="string">
+  任务进度，例如 `50%`。仅在进行中和成功时返回。
+</ResponseField>
+
+<ResponseField name="created" type="integer">
+  本次响应的生成时间，Unix 时间戳（秒）。
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  生成的图片列表，仅在 `SUCCESS` 时返回。
+
+  <Expandable title="图片对象">
+    <ResponseField name="url" type="string">
+      图片链接。
+    </ResponseField>
+    <ResponseField name="revised_prompt" type="string">
+      模型改写后的提示词，部分模型返回。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="fail_reason" type="string">
+  失败原因，仅在 `FAILED` 时返回。
+</ResponseField>
+
+## 错误响应
+
+| 状态码 | `error.code` | 说明 |
+| - | - | - |
+| `400` | `invalid_task_type` | 该任务不是图片任务，例如把视频任务 ID 传给了本接口 |
+| `401` | | API Key 无效 |
+| `404` | `task_not_found` | 任务不存在，或不属于当前账户 |

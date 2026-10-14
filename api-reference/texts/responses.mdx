@@ -1,0 +1,313 @@
+---
+title: "Responses 接口"
+api: "POST /v1/responses"
+description: "兼容 OpenAI Responses API，适用于推理模型、工具调用和 Codex CLI。"
+---
+
+- 请求与响应格式与 OpenAI Responses API 一致，可以使用 OpenAI SDK 的 `client.responses.create`。
+- 适合推理模型、函数调用、远程 MCP 等场景，也是 Codex CLI 使用的接口。
+- 支持该接口的模型在 [模型列表](/api-reference/models/list) 的 `supported_endpoint_types` 中包含 `openai-response`。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/responses \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-6",
+    "instructions": "你是一个简洁的助手。",
+    "input": "用一句话解释什么是 RAG。",
+    "reasoning": {"effort": "medium"}
+  }'
+```
+
+```python Python
+from openai import OpenAI
+
+client = OpenAI(base_url="https://api.nodylink.com/v1", api_key="sk-你的密钥")
+
+resp = client.responses.create(
+    model="gpt-6",
+    instructions="你是一个简洁的助手。",
+    input="用一句话解释什么是 RAG。",
+    reasoning={"effort": "medium"},
+)
+print(resp.output_text)
+```
+
+```javascript Node.js
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.nodylink.com/v1",
+  apiKey: "sk-你的密钥",
+});
+
+const resp = await client.responses.create({
+  model: "gpt-6",
+  instructions: "你是一个简洁的助手。",
+  input: "用一句话解释什么是 RAG。",
+  reasoning: { effort: "medium" },
+});
+console.log(resp.output_text);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "resp_68f1a2b3c4d5e6f7",
+  "object": "response",
+  "created_at": 1792000000,
+  "status": "completed",
+  "model": "gpt-6",
+  "output": [
+    {
+      "id": "rs_68f1a2b3c4d5e6f8",
+      "type": "reasoning",
+      "summary": []
+    },
+    {
+      "id": "msg_68f1a2b3c4d5e6f9",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "RAG（检索增强生成）是先从知识库检索相关资料，再让模型基于这些资料生成回答的方法。",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 26,
+    "input_tokens_details": {"cached_tokens": 0},
+    "output_tokens": 188,
+    "output_tokens_details": {"reasoning_tokens": 128},
+    "total_tokens": 214
+  }
+}
+```
+
+```text 200 (stream)
+event: response.created
+data: {"type":"response.created","response":{"id":"resp_68f1a2b3c4d5e6f7","status":"in_progress"}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","item_id":"msg_68f1a2b3c4d5e6f9","output_index":1,"content_index":0,"delta":"RAG"}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","item_id":"msg_68f1a2b3c4d5e6f9","output_index":1,"content_index":0,"text":"RAG（检索增强生成）是……"}
+
+event: response.completed
+data: {"type":"response.completed","response":{"id":"resp_68f1a2b3c4d5e6f7","status":"completed","usage":{"input_tokens":26,"output_tokens":188,"total_tokens":214}}}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required>
+  模型 ID，例如 `gpt-6`。可用模型以 [模型广场](https://nodylink.com/market) 为准。
+</ParamField>
+
+<ParamField body="input" type="string | array" required>
+  模型输入。字符串等同于一条用户消息；数组形式可以包含多条消息和多模态内容：
+
+  ```json
+  [
+    {
+      "role": "user",
+      "content": [
+        {"type": "input_text", "text": "描述这张图片"},
+        {"type": "input_image", "image_url": "https://example.com/cat.png"}
+      ]
+    }
+  ]
+  ```
+</ParamField>
+
+<ParamField body="instructions" type="string">
+  系统指令，作用相当于 Chat Completions 中的 `system` 消息。
+</ParamField>
+
+<ParamField body="stream" type="boolean" default="false">
+  是否以 SSE 流式返回。事件类型包括 `response.created`、`response.output_text.delta`、`response.output_text.done`、`response.completed` 等。
+</ParamField>
+
+<ParamField body="max_output_tokens" type="integer">
+  最大输出 token 数，包含推理 token。
+</ParamField>
+
+<ParamField body="reasoning" type="object">
+  推理配置。
+
+  <Expandable title="属性">
+    <ParamField body="effort" type="string">
+      推理强度：`minimal`、`low`、`medium`、`high`，可用取值取决于模型。
+    </ParamField>
+    <ParamField body="summary" type="string">
+      推理摘要：`auto`、`concise` 或 `detailed`。
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="tools" type="array">
+  工具列表。
+
+  函数工具使用扁平结构：
+
+  ```json
+  {
+    "type": "function",
+    "name": "get_weather",
+    "description": "查询城市天气",
+    "parameters": {
+      "type": "object",
+      "properties": {"city": {"type": "string"}},
+      "required": ["city"]
+    }
+  }
+  ```
+
+  远程 MCP 工具：
+
+  ```json
+  {
+    "type": "mcp",
+    "server_label": "deepwiki",
+    "server_url": "https://mcp.deepwiki.com/mcp",
+    "require_approval": "never"
+  }
+  ```
+</ParamField>
+
+<ParamField body="tool_choice" type="string | object">
+  工具调用策略：`auto`、`none`、`required`，或 `{"type": "function", "name": "..."}`。
+</ParamField>
+
+<ParamField body="text" type="object">
+  文本输出配置。结构化输出写法：`{"format": {"type": "json_schema", "name": "...", "schema": {...}}}`。
+</ParamField>
+
+<ParamField body="temperature" type="number">
+  采样温度。推理模型通常不支持。
+</ParamField>
+
+<ParamField body="previous_response_id" type="string">
+  上一轮响应的 `id`，用于多轮对话。是否可用取决于上游是否保存了该响应，建议在 `input` 中自行携带历史消息。
+</ParamField>
+
+<ParamField body="store" type="boolean">
+  是否让上游保存本次响应。
+</ParamField>
+
+## 响应
+
+<ResponseField name="id" type="string">
+  响应 ID。
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  固定为 `response`。
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  响应状态：`completed`、`incomplete`、`failed` 等。
+</ResponseField>
+
+<ResponseField name="output" type="array">
+  输出项列表，按生成顺序排列。
+
+  <Expandable title="常见输出项">
+    <ResponseField name="type: message" type="object">
+      模型回复，正文在 `content[].text` 中（`content[].type` 为 `output_text`）。
+    </ResponseField>
+    <ResponseField name="type: reasoning" type="object">
+      推理过程，可能带有 `summary`。
+    </ResponseField>
+    <ResponseField name="type: function_call" type="object">
+      函数调用，包含 `call_id`、`name` 和 JSON 字符串形式的 `arguments`。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="object">
+  token 用量。
+
+  <Expandable title="属性">
+    <ResponseField name="input_tokens" type="integer">
+      输入 token 数。
+    </ResponseField>
+    <ResponseField name="input_tokens_details.cached_tokens" type="integer">
+      命中缓存的输入 token 数。
+    </ResponseField>
+    <ResponseField name="output_tokens" type="integer">
+      输出 token 数，包含推理 token。
+    </ResponseField>
+    <ResponseField name="output_tokens_details.reasoning_tokens" type="integer">
+      推理 token 数。
+    </ResponseField>
+    <ResponseField name="total_tokens" type="integer">
+      总 token 数。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## 函数调用
+
+```python
+import json
+
+tools = [{
+    "type": "function",
+    "name": "get_weather",
+    "description": "查询城市天气",
+    "parameters": {
+        "type": "object",
+        "properties": {"city": {"type": "string"}},
+        "required": ["city"],
+    },
+}]
+
+input_items = [{"role": "user", "content": "上海现在多少度？"}]
+resp = client.responses.create(model="gpt-6", input=input_items, tools=tools)
+
+call = next(item for item in resp.output if item.type == "function_call")
+args = json.loads(call.arguments)  # {"city": "上海"}
+
+# 把模型输出和函数结果一起回传
+input_items += resp.output
+input_items.append({
+    "type": "function_call_output",
+    "call_id": call.call_id,
+    "output": json.dumps({"temperature": "18℃"}),
+})
+
+final = client.responses.create(model="gpt-6", input=input_items, tools=tools)
+print(final.output_text)
+```
+
+## 在 Codex CLI 中使用
+
+在 `~/.codex/config.toml` 中添加：
+
+```toml
+model = "gpt-6"
+model_provider = "nodylink"
+
+[model_providers.nodylink]
+name = "NODYLINK"
+base_url = "https://api.nodylink.com/v1"
+env_key = "NODYLINK_API_KEY"
+wire_api = "responses"
+```
+
+然后设置环境变量 `NODYLINK_API_KEY` 并运行 `codex`。

@@ -1,0 +1,221 @@
+---
+title: "GPT Image 2.5"
+api: "POST /v1/images/generations"
+description: "OpenAI GPT Image 2.5 图像生成，提供 Flare 与 Sunburst 两个版本，统一以高质量档位出图。"
+---
+
+- 异步接口：提交后立即返回 `task_id`，再调用 [查询图片任务](/api-reference/images/task-status) 获取结果。
+- 请求参数与 [GPT Image 2](/api-reference/images/gpt-image-2) 一致，只需更换 `model`。
+- 按张计费，单价由分辨率档位决定，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+## 模型选择
+
+| 模型 ID | 特点 | 适用场景 |
+| - | - | - |
+| `gpt-image-2.5-flare` | 生成速度快 | 社媒内容、商品图、快速原型、大批量生成 |
+| `gpt-image-2.5-sunburst` | 编辑精度优先 | 投放级创意、成品级商品图、多轮精细编辑 |
+
+<Note>
+  GPT Image 2.5 由平台统一以高质量档位生成，无需传 `quality`，传入的值可能被覆盖。
+</Note>
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/images/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-image-2.5-flare",
+    "prompt": "未来感城市中的空中花园，清晨薄雾，建筑摄影",
+    "size": "16:9",
+    "resolution": "2k"
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v1/images/generations",
+    headers=headers,
+    json={
+        "model": "gpt-image-2.5-flare",
+        "prompt": "未来感城市中的空中花园，清晨薄雾，建筑摄影",
+        "size": "16:9",
+        "resolution": "2k",
+    },
+).json()
+task_id = submit["task_id"]
+
+while True:
+    task = requests.get(f"{BASE}/v1/images/tasks/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(task["data"][0]["url"])
+        break
+    if task["status"] == "FAILED":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(5)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v1/images/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "gpt-image-2.5-flare",
+    prompt: "未来感城市中的空中花园，清晨薄雾，建筑摄影",
+    size: "16:9",
+    resolution: "2k",
+  }),
+}).then((r) => r.json());
+
+while (true) {
+  const task = await fetch(`${BASE}/v1/images/tasks/${submit.task_id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(task.data[0].url);
+    break;
+  }
+  if (task.status === "FAILED") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 5000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "code": 200,
+  "status": "submitted",
+  "task_id": "8a1d4c7e-2b5f-4e90-a3c6-71f0d2b9e845",
+  "id": "8a1d4c7e-2b5f-4e90-a3c6-71f0d2b9e845"
+}
+```
+
+```json 400
+{
+  "code": "invalid_request",
+  "message": "prompt is required",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required>
+  `gpt-image-2.5-flare` 或 `gpt-image-2.5-sunburst`。
+</ParamField>
+
+<ParamField body="prompt" type="string" required>
+  图像生成或编辑的描述，支持中英文。建议说明主体、场景、构图、风格、光线，以及需要保留或修改的内容。
+</ParamField>
+
+<ParamField body="size" type="string" default="1:1">
+  输出比例或精确像素尺寸。
+
+  - 比例：`1:1`、`3:2`、`2:3`、`4:3`、`3:4`、`5:4`、`4:5`、`16:9`、`9:16`、`2:1`、`1:2`、`21:9`、`9:21`、`3:1`、`1:3`
+  - 像素：例如 `2048x1152`，此时忽略 `resolution`
+
+  各比例在不同档位下的实际像素见 [GPT Image 2 尺寸对照表](/api-reference/images/gpt-image-2)。
+</ParamField>
+
+<ParamField body="resolution" type="string" default="1k">
+  分辨率档位：`1k`、`2k` 或 `4k`，大小写均可。
+</ParamField>
+
+<ParamField body="image_urls" type="string[]">
+  参考图列表，传入后为图生图 / 参考图编辑模式。每项可以是公网图片 URL 或 `data:image/png;base64,...` 格式的 Data URL。
+</ParamField>
+
+## 提交响应
+
+<ResponseField name="code" type="integer">
+  固定为 `200`。
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  固定为 `submitted`。
+</ResponseField>
+
+<ResponseField name="task_id" type="string">
+  任务 ID，用于 [查询图片任务](/api-reference/images/task-status)。
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  与 `task_id` 相同。
+</ResponseField>
+
+## 使用示例
+
+**文生图**
+
+```json
+{
+  "model": "gpt-image-2.5-flare",
+  "prompt": "极简风格的产品发布会主视觉",
+  "size": "16:9",
+  "resolution": "2k"
+}
+```
+
+**商品图精修（Sunburst）**
+
+```json
+{
+  "model": "gpt-image-2.5-sunburst",
+  "prompt": "保留商品主体和包装文字，把背景换成柔和的米白色摄影棚，并增加自然投影",
+  "image_urls": ["https://example.com/product.png"],
+  "resolution": "2k"
+}
+```
+
+**多参考图合成**
+
+```json
+{
+  "model": "gpt-image-2.5-sunburst",
+  "prompt": "以第一张图的商品为主体，参考第二张图的布景和第三张图的光线，生成横版广告图",
+  "image_urls": [
+    "https://example.com/product.png",
+    "https://example.com/set.jpg",
+    "https://example.com/lighting.jpg"
+  ],
+  "size": "16:9",
+  "resolution": "4k"
+}
+```
+
+## 查询结果
+
+```json
+{
+  "status": "SUCCESS",
+  "task_id": "8a1d4c7e-2b5f-4e90-a3c6-71f0d2b9e845",
+  "progress": "100%",
+  "created": 1792000090,
+  "data": [
+    {"url": "https://example.com/generated/8a1d4c7e.png"}
+  ]
+}
+```
+
+取图方式：`data[0].url`。状态说明见 [查询图片任务](/api-reference/images/task-status)。

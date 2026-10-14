@@ -1,0 +1,205 @@
+---
+title: "Gemini Nano Banana 2.1"
+api: "POST /v1/images/generations"
+description: "Google Gemini Nano Banana 2.1 图像生成与编辑，支持 14 种宽高比和 1K / 2K / 4K 输出。"
+---
+
+- 异步接口：提交后立即返回 `task_id`，再调用 [查询图片任务](/api-reference/images/task-status) 获取结果。
+- 不传 `image_urls` 为文生图；传入 `image_urls` 为图生图 / 图像编辑。
+- 按张计费，单价由分辨率档位决定，宽高比不影响价格，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/images/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-nano-banana-2.1",
+    "prompt": "赛博朋克风格的城市夜景，霓虹灯，雨后街道",
+    "size": "16:9",
+    "resolution": "2K"
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v1/images/generations",
+    headers=headers,
+    json={
+        "model": "gemini-nano-banana-2.1",
+        "prompt": "赛博朋克风格的城市夜景，霓虹灯，雨后街道",
+        "size": "16:9",
+        "resolution": "2K",
+    },
+).json()
+task_id = submit["task_id"]
+
+while True:
+    task = requests.get(f"{BASE}/v1/images/tasks/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(task["data"][0]["url"])
+        break
+    if task["status"] == "FAILED":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(5)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v1/images/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "gemini-nano-banana-2.1",
+    prompt: "赛博朋克风格的城市夜景，霓虹灯，雨后街道",
+    size: "16:9",
+    resolution: "2K",
+  }),
+}).then((r) => r.json());
+
+while (true) {
+  const task = await fetch(`${BASE}/v1/images/tasks/${submit.task_id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(task.data[0].url);
+    break;
+  }
+  if (task.status === "FAILED") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 5000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "code": 200,
+  "status": "submitted",
+  "task_id": "e94a2c6d-1f3b-4b87-9d05-6c8f3e2a7b10",
+  "id": "e94a2c6d-1f3b-4b87-9d05-6c8f3e2a7b10"
+}
+```
+
+```json 400
+{
+  "code": "invalid_request",
+  "message": "prompt is required",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required default="gemini-nano-banana-2.1">
+  模型 ID，填 `gemini-nano-banana-2.1`。
+</ParamField>
+
+<ParamField body="prompt" type="string" required>
+  图像生成或编辑的描述，支持中英文。
+</ParamField>
+
+<ParamField body="size" type="string">
+  输出宽高比，支持 14 种：`1:1`、`2:3`、`3:2`、`3:4`、`4:3`、`4:5`、`5:4`、`9:16`、`16:9`、`21:9`、`1:4`、`4:1`、`1:8`、`8:1`。
+
+  不传时，文生图由模型决定比例，图生图跟随参考图比例。
+</ParamField>
+
+<ParamField body="aspect_ratio" type="string">
+  宽高比，取值同 `size`。与 `size` 同时传入时以 `aspect_ratio` 为准。
+</ParamField>
+
+<ParamField body="resolution" type="string" default="1K">
+  分辨率档位：`1K`、`2K` 或 `4K`，大小写均可。不支持 `0.5K`。同时决定计费档位。
+</ParamField>
+
+<ParamField body="image_urls" type="string[]">
+  参考图列表，用于图生图或图像编辑。也可以用 `image` 或 `images` 字段传入。
+
+  每项支持公网图片 URL、`data:image/png;base64,...` 格式的 Data URL，或纯 Base64 字符串。建议使用 PNG、JPEG 或 WEBP，单张不超过 20 MB。参考图越多，生成耗时通常越长。
+</ParamField>
+
+## 输出尺寸参考
+
+| 宽高比 | 1K | 2K | 4K |
+| - | - | - | - |
+| `1:1` | 1024×1024 | 2048×2048 | 4096×4096 |
+| `2:3` | 848×1264 | 1696×2528 | 3392×5056 |
+| `3:2` | 1264×848 | 2528×1696 | 5056×3392 |
+| `3:4` | 896×1200 | 1792×2400 | 3584×4800 |
+| `4:3` | 1200×896 | 2400×1792 | 4800×3584 |
+| `4:5` | 928×1152 | 1856×2304 | 3712×4608 |
+| `5:4` | 1152×928 | 2304×1856 | 4608×3712 |
+| `9:16` | 768×1376 | 1536×2752 | 3072×5504 |
+| `16:9` | 1376×768 | 2752×1536 | 5504×3072 |
+| `21:9` | 1584×672 | 3168×1344 | 6336×2688 |
+
+实际像素以返回的图片为准。
+
+## 提交响应
+
+<ResponseField name="code" type="integer">
+  固定为 `200`。
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  固定为 `submitted`。
+</ResponseField>
+
+<ResponseField name="task_id" type="string">
+  任务 ID，用于 [查询图片任务](/api-reference/images/task-status)。
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  与 `task_id` 相同。
+</ResponseField>
+
+## 使用示例
+
+**编辑参考图**
+
+```json
+{
+  "model": "gemini-nano-banana-2.1",
+  "prompt": "给画面里的猫戴上一顶红色毛线帽，其余保持不变",
+  "image_urls": ["https://example.com/cat.jpg"],
+  "resolution": "1K"
+}
+```
+
+不传 `size` 时，输出跟随参考图比例。
+
+## 查询结果
+
+```json
+{
+  "status": "SUCCESS",
+  "task_id": "e94a2c6d-1f3b-4b87-9d05-6c8f3e2a7b10",
+  "progress": "100%",
+  "created": 1792000050,
+  "data": [
+    {"url": "https://example.com/generated/e94a2c6d.png"}
+  ]
+}
+```
+
+取图方式：`data[0].url`。状态说明见 [查询图片任务](/api-reference/images/task-status)。

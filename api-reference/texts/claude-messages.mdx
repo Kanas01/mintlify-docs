@@ -1,0 +1,253 @@
+---
+title: "Claude 消息接口"
+api: "POST /v1/messages"
+description: "兼容 Anthropic Messages API，可直接使用 Anthropic 官方 SDK 和 Claude Code。"
+---
+
+- 请求体与响应体与 Anthropic Messages API 保持一致，网关原样转发。
+- 鉴权支持 `Authorization: Bearer <API Key>`，也支持 Anthropic 风格的 `x-api-key: <API Key>`。
+- `anthropic-version`、`anthropic-beta` 请求头会透传给上游。
+- 使用 Anthropic SDK 时，`base_url` 填 `https://api.nodylink.com`，不要带 `/v1`。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/messages \
+  -H "x-api-key: sk-你的密钥" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 1024,
+    "system": "你是一个专业的 AI 助手。",
+    "messages": [
+      {"role": "user", "content": "用三句话解释量子纠缠。"}
+    ]
+  }'
+```
+
+```python Python
+import anthropic
+
+client = anthropic.Anthropic(
+    base_url="https://api.nodylink.com",
+    api_key="sk-你的密钥",
+)
+
+message = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=1024,
+    system="你是一个专业的 AI 助手。",
+    messages=[{"role": "user", "content": "用三句话解释量子纠缠。"}],
+)
+print(message.content[0].text)
+```
+
+```javascript Node.js
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({
+  baseURL: "https://api.nodylink.com",
+  apiKey: "sk-你的密钥",
+});
+
+const message = await client.messages.create({
+  model: "claude-sonnet-4-6",
+  max_tokens: 1024,
+  system: "你是一个专业的 AI 助手。",
+  messages: [{ role: "user", content: "用三句话解释量子纠缠。" }],
+});
+console.log(message.content[0].text);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-4-6",
+  "content": [
+    {
+      "type": "text",
+      "text": "量子纠缠是指两个或多个粒子形成一个整体量子态……"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 24,
+    "output_tokens": 156,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}
+```
+
+```text 200 (stream)
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_01XFDUDYJgAACzvnptvVoYEL","type":"message","role":"assistant","model":"claude-sonnet-4-6","content":[],"stop_reason":null,"usage":{"input_tokens":24,"output_tokens":1}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"量子纠缠是指"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"output_tokens":156}}
+
+event: message_stop
+data: {"type":"message_stop"}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="x-api-key" type="string">
+  API Key。与 `Authorization` 二选一。
+</ParamField>
+
+<ParamField header="Authorization" type="string">
+  `Bearer <API Key>`。与 `x-api-key` 二选一。
+</ParamField>
+
+<ParamField header="anthropic-version" type="string" default="2023-06-01">
+  Anthropic API 版本。
+</ParamField>
+
+<ParamField header="anthropic-beta" type="string">
+  启用 Beta 功能，多个值用逗号分隔，例如 `extended-cache-ttl-2025-04-11`。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required>
+  Claude 模型 ID，例如 `claude-sonnet-4-6`、`claude-opus-4-7`。可用模型以 [模型广场](https://nodylink.com/market) 为准。
+</ParamField>
+
+<ParamField body="messages" type="array" required>
+  对话消息列表，`user` 与 `assistant` 交替出现。
+
+  <Expandable title="消息对象">
+    <ParamField body="role" type="string" required>
+      `user` 或 `assistant`。
+    </ParamField>
+    <ParamField body="content" type="string | array" required>
+      消息内容。字符串，或内容块数组。内容块类型包括 `text`、`image`、`document`、`tool_use`、`tool_result` 等。
+
+      图片内容块示例：
+
+      ```json
+      {
+        "type": "image",
+        "source": {"type": "url", "url": "https://example.com/cat.png"}
+      }
+      ```
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="max_tokens" type="integer" required>
+  生成内容的最大 token 数。
+</ParamField>
+
+<ParamField body="system" type="string | array">
+  系统提示词。需要配合 [上下文缓存](/api-reference/texts/claude-context-cache) 使用时，写成内容块数组。
+</ParamField>
+
+<ParamField body="stream" type="boolean" default="false">
+  是否以 SSE 流式返回。流式事件依次为 `message_start`、`content_block_start`、`content_block_delta`、`content_block_stop`、`message_delta`、`message_stop`。
+</ParamField>
+
+<ParamField body="temperature" type="number">
+  采样温度，取值 0 到 1。
+</ParamField>
+
+<ParamField body="top_p" type="number">
+  核采样阈值。
+</ParamField>
+
+<ParamField body="top_k" type="integer">
+  只从概率最高的 K 个 token 中采样。
+</ParamField>
+
+<ParamField body="stop_sequences" type="string[]">
+  自定义停止序列。
+</ParamField>
+
+<ParamField body="thinking" type="object">
+  扩展思考配置，例如 `{"type": "enabled", "budget_tokens": 8000}`。`budget_tokens` 必须小于 `max_tokens`。
+</ParamField>
+
+<ParamField body="tools" type="array">
+  工具定义列表，每项包含 `name`、`description` 和 `input_schema`。
+</ParamField>
+
+<ParamField body="tool_choice" type="object">
+  工具调用策略：`{"type": "auto"}`、`{"type": "any"}`、`{"type": "tool", "name": "..."}` 或 `{"type": "none"}`。
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  请求元数据，例如 `{"user_id": "..."}`。
+</ParamField>
+
+## 响应
+
+<ResponseField name="id" type="string">
+  消息 ID。
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  固定为 `message`。
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  固定为 `assistant`。
+</ResponseField>
+
+<ResponseField name="content" type="array">
+  回复内容块，类型可能为 `text`、`thinking`、`tool_use`。
+</ResponseField>
+
+<ResponseField name="stop_reason" type="string">
+  结束原因：`end_turn`、`max_tokens`、`stop_sequence`、`tool_use`、`pause_turn` 或 `refusal`。
+</ResponseField>
+
+<ResponseField name="usage" type="object">
+  token 用量。
+
+  <Expandable title="属性">
+    <ResponseField name="input_tokens" type="integer">
+      未命中缓存的输入 token 数。
+    </ResponseField>
+    <ResponseField name="output_tokens" type="integer">
+      输出 token 数。
+    </ResponseField>
+    <ResponseField name="cache_creation_input_tokens" type="integer">
+      本次写入缓存的 token 数。
+    </ResponseField>
+    <ResponseField name="cache_read_input_tokens" type="integer">
+      本次从缓存读取的 token 数。
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## 在 Claude Code 中使用
+
+```bash
+export ANTHROPIC_BASE_URL="https://api.nodylink.com"
+export ANTHROPIC_AUTH_TOKEN="sk-你的密钥"
+claude
+```
+
+<Note>
+  `/v1/messages/count_tokens` 暂不支持。需要估算 token 数时，可以先发一次请求，从 `usage` 中读取。
+</Note>
+
+<Tip>
+  Claude 模型同样可以通过 [对话补全接口](/api-reference/texts/chat-completions) 以 OpenAI 格式调用。需要扩展思考、上下文缓存等 Claude 专属能力时，建议使用本接口。
+</Tip>

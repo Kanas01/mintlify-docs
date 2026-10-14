@@ -1,0 +1,212 @@
+---
+title: "Gemini 3.1 Flash Image"
+api: "POST /v1/images/generations"
+description: "Google Gemini 3.1 Flash Image（Nano Banana 2）图像生成，速度快、支持超宽与超长画幅。"
+---
+
+- 异步接口：提交后立即返回 `task_id`，再调用 [查询图片任务](/api-reference/images/task-status) 获取结果。
+- 不传 `image_urls` 为文生图；传入 `image_urls` 为图生图 / 图像编辑。
+- 按张计费，单价由分辨率档位（1K / 2K / 4K）决定，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/images/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-3.1-flash-image",
+    "prompt": "清晨的江南水乡，薄雾，乌篷船，国风水墨",
+    "size": "21:9",
+    "resolution": "2K"
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v1/images/generations",
+    headers=headers,
+    json={
+        "model": "gemini-3.1-flash-image",
+        "prompt": "清晨的江南水乡，薄雾，乌篷船，国风水墨",
+        "size": "21:9",
+        "resolution": "2K",
+    },
+).json()
+task_id = submit["task_id"]
+
+while True:
+    task = requests.get(f"{BASE}/v1/images/tasks/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(task["data"][0]["url"])
+        break
+    if task["status"] == "FAILED":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(5)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v1/images/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "gemini-3.1-flash-image",
+    prompt: "清晨的江南水乡，薄雾，乌篷船，国风水墨",
+    size: "21:9",
+    resolution: "2K",
+  }),
+}).then((r) => r.json());
+
+while (true) {
+  const task = await fetch(`${BASE}/v1/images/tasks/${submit.task_id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(task.data[0].url);
+    break;
+  }
+  if (task.status === "FAILED") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 5000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "code": 200,
+  "status": "submitted",
+  "task_id": "5d0b8e3f-7c19-4a62-8f4d-2e6b1a9c0f57",
+  "id": "5d0b8e3f-7c19-4a62-8f4d-2e6b1a9c0f57"
+}
+```
+
+```json 400
+{
+  "code": "invalid_request",
+  "message": "prompt is required",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="model" type="string" required default="gemini-3.1-flash-image">
+  模型 ID，填 `gemini-3.1-flash-image`。兼容别名 `gemini-3.1-flash-image-preview`。
+</ParamField>
+
+<ParamField body="prompt" type="string" required>
+  图像描述，支持中英文。
+</ParamField>
+
+<ParamField body="size" type="string">
+  输出宽高比：
+
+  | 比例 | 适用场景 |
+  | - | - |
+  | `1:1` | 头像、社交媒体方图 |
+  | `3:2` / `2:3` | 标准照片 |
+  | `4:3` / `3:4` | 传统屏幕比例 |
+  | `5:4` / `4:5` | 社交媒体竖图 |
+  | `16:9` / `9:16` | 横屏 / 竖屏封面 |
+  | `21:9` | 超宽横幅 |
+  | `4:1` / `1:4` | 长条横幅、长图 |
+  | `8:1` / `1:8` | 极端横幅、长图 |
+
+  不传时，文生图由模型决定比例，图生图跟随参考图比例。
+</ParamField>
+
+<ParamField body="aspect_ratio" type="string">
+  宽高比，取值同 `size`。与 `size` 同时传入时以 `aspect_ratio` 为准。
+</ParamField>
+
+<ParamField body="resolution" type="string" default="1K">
+  分辨率档位：`1K`（约 1024px）、`2K`（约 2048px）或 `4K`（约 4096px），大小写均可。同时决定计费档位。
+</ParamField>
+
+<ParamField body="image_urls" type="string[]">
+  参考图列表，用于图生图或图像编辑。也可以用 `image` 或 `images` 字段传入。
+
+  <Expandable title="详细说明">
+    每项支持公网图片 URL、`data:image/...;base64,...` 格式的 Data URL，或纯 Base64 字符串。
+
+    最多 14 张，建议最多 10 张物体参考加 4 张角色参考。单张不超过 10 MB，格式为 JPEG、PNG 或 WEBP。
+  </Expandable>
+</ParamField>
+
+## 提交响应
+
+<ResponseField name="code" type="integer">
+  固定为 `200`。
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  固定为 `submitted`。
+</ResponseField>
+
+<ResponseField name="task_id" type="string">
+  任务 ID，用于 [查询图片任务](/api-reference/images/task-status)。
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  与 `task_id` 相同。
+</ResponseField>
+
+## 使用示例
+
+**超长竖图**
+
+```json
+{
+  "model": "gemini-3.1-flash-image",
+  "prompt": "一幅从山脚到山顶的登山路线手绘长图，标注沿途景点",
+  "size": "1:4",
+  "resolution": "2K"
+}
+```
+
+**角色一致性**
+
+```json
+{
+  "model": "gemini-3.1-flash-image",
+  "prompt": "让参考图中的女孩坐在图书馆里看书，保持人物外貌一致",
+  "image_urls": ["https://example.com/girl.png"],
+  "size": "4:3"
+}
+```
+
+## 查询结果
+
+```json
+{
+  "status": "SUCCESS",
+  "task_id": "5d0b8e3f-7c19-4a62-8f4d-2e6b1a9c0f57",
+  "progress": "100%",
+  "created": 1792000030,
+  "data": [
+    {"url": "https://example.com/generated/5d0b8e3f.png"}
+  ]
+}
+```
+
+取图方式：`data[0].url`。状态说明见 [查询图片任务](/api-reference/images/task-status)。

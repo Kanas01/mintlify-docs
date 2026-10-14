@@ -1,20 +1,94 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "NODYLINK 模型网关"
+sidebarTitle: "概览"
+description: "兼容 OpenAI 协议的模型网关。文本、图像、视频模型共用一套接口、一个密钥和一份账单。"
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+NODYLINK 提供统一的 OpenAI 兼容端点，同时支持 Claude Messages、Gemini 原生和 OpenAI Responses 协议。把 Base URL 改成 `https://api.nodylink.com/v1`，换上 NODYLINK 的 API Key，现有 SDK 和代码即可继续使用。
+
+## 快速开始
+
+<Card title="5 分钟完成第一次调用" icon="rocket" horizontal href="/quickstart">
+  创建 API Key、配置 Base URL，发出第一条对话请求。
+</Card>
+
+## 接口一览
+
+<CardGroup cols={2}>
+  <Card title="文本对话" icon="message" href="/api-reference/texts/chat-completions">
+    `POST /v1/chat/completions`，兼容 OpenAI Chat Completions，支持流式输出。
+  </Card>
+  <Card title="Claude / Gemini 原生协议" icon="code" href="/api-reference/texts/claude-messages">
+    `POST /v1/messages` 与 `POST /v1beta/models/{model}:generateContent`，官方 SDK 直接可用。
+  </Card>
+  <Card title="图像生成" icon="image" href="/api-reference/images/gpt-image-2">
+    `POST /v1/images/generations`，GPT Image 与 Gemini Image 系列，异步任务出图。
+  </Card>
+  <Card title="视频生成" icon="video" href="/api-reference/videos/seedance/seedance-2-0">
+    `POST /v2/videos/generations`，Doubao Seedance 系列，请求体与火山方舟官方一致。
+  </Card>
+</CardGroup>
+
+## 基本信息
+
+| 项目 | 值 |
+| - | - |
+| Base URL | `https://api.nodylink.com` |
+| OpenAI 兼容地址 | `https://api.nodylink.com/v1` |
+| 鉴权方式 | 请求头 `Authorization: Bearer <API Key>` |
+| 请求格式 | `application/json`，UTF-8 编码 |
+| 计费币种 | 人民币，按量付费，无月费 |
 
 <Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
+  API Key 在 [控制台 → API 密钥](https://nodylink.com/dashboard/keys) 中创建。每个密钥可以单独限制可用模型、切换分组。
 </Tip>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## 同步接口与异步任务
+
+| 类型 | 接口 | 返回方式 |
+| - | - | - |
+| 文本对话 | `/v1/chat/completions`、`/v1/messages`、`/v1/responses`、`/v1beta/models/*` | 同步返回，或通过 SSE 流式返回 |
+| 图像生成 | `/v1/images/generations` | 提交后立即返回 `task_id`，再通过 `GET /v1/images/tasks/{task_id}` 查询结果 |
+| 视频生成 | `/v2/videos/generations` | 提交后立即返回任务 ID，再通过 `GET /v2/videos/generations/{task_id}` 查询结果 |
+
+异步任务失败时，预扣的费用会自动退回账户。任务记录可以在 [控制台 → 任务日志](https://nodylink.com/dashboard/tasks) 中查看。
+
+## SDK 接入
+
+所有 OpenAI 兼容接口都可以直接使用 OpenAI 官方 SDK，只需修改 `base_url`。
+
+<CodeGroup>
+```python Python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.nodylink.com/v1",
+    api_key="sk-你的密钥",
+)
+```
+
+```javascript Node.js
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.nodylink.com/v1",
+  apiKey: "sk-你的密钥",
+});
+```
+</CodeGroup>
+
+使用 Anthropic SDK 调用 Claude 时，`base_url` 填 `https://api.nodylink.com`（不带 `/v1`），详见 [Claude 消息接口](/api-reference/texts/claude-messages)。
+
+## 平台特性
+
+<AccordionGroup>
+  <Accordion title="自动切换渠道">
+    同一个模型配置了多条上游线路。遇到 429 或 5xx 时，网关会自动切换到下一条线路重试，调用方无需处理。
+  </Accordion>
+  <Accordion title="透明计费">
+    文本模型按 token 计费，图像按张计费，视频按秒或按 token 计费。实时单价见 [模型价格](https://nodylink.com/pricing)，每次调用的扣费明细见 [使用日志](https://nodylink.com/dashboard/logs)。
+  </Accordion>
+  <Accordion title="逐笔可追溯">
+    每个请求都有唯一的 Request ID，出现在错误信息末尾的 `(request id: ...)` 中。反馈问题时请附上它。
+  </Accordion>
+</AccordionGroup>
