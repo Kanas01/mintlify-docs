@@ -1,0 +1,365 @@
+---
+title: "Wan 3.0"
+api: "POST /v2/videos/generations"
+description: "阿里云万相 3.0 全能参考视频模型：文生视频、首尾帧、多模态参考，以及参考文档 / 网页生成视频。"
+---
+
+- 一个模型覆盖多种生成方式，按传入的素材自动判断：文生视频、首帧、首尾帧、参考生视频、参考文档或网页生视频。
+- 分辨率 480P / 720P / 1080P，时长 2～30 秒，或传 `-1` 由模型决定。
+- 异步接口：提交后立即返回任务 `id`，再调用 [查询视频任务](/api-reference/videos/task-status) 获取结果。
+- 按时长和分辨率计费，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+## 模型
+
+| 模型 ID | 说明 |
+| - | - |
+| `wan3.0-video` | 标准版 |
+| `wan3.0-video-prime` | Prime 版，参数与标准版一致 |
+
+可用模型以 [模型广场](https://nodylink.com/market) 为准。
+
+## 生成模式
+
+| 模式 | 典型传参 |
+| - | - |
+| 文生视频 | 只传 `prompt` |
+| 首帧生视频 | `image_urls` 传 1 张 |
+| 首尾帧生视频 | `image_urls` 传 2 张，或用 `image_with_roles` 指定 `first_frame` / `last_frame` |
+| 参考生视频 | 参考图、参考视频、参考音频，`prompt` 中用「图1」「视频1」「音频1」指代 |
+| 参考文档 / 网页生视频 | `file_url` 或 `link_url` |
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v2/videos/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "wan3.0-video",
+    "prompt": "一只小猫在月光下的屋顶上奔跑，城市的霓虹灯在远处闪烁，电影级画质，流畅运镜。",
+    "resolution": "720P",
+    "size": "16:9",
+    "duration": 5
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v2/videos/generations",
+    headers=headers,
+    json={
+        "model": "wan3.0-video",
+        "prompt": "一只小猫在月光下的屋顶上奔跑，城市的霓虹灯在远处闪烁，电影级画质，流畅运镜。",
+        "resolution": "720P",
+        "size": "16:9",
+        "duration": 5,
+    },
+).json()
+task_id = submit["id"]
+
+while True:
+    task = requests.get(f"{BASE}/v2/videos/generations/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(task["data"]["result"]["videos"][0]["url"][0])
+        break
+    if task["status"] == "FAILURE":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(10)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v2/videos/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "wan3.0-video",
+    prompt: "一只小猫在月光下的屋顶上奔跑，城市的霓虹灯在远处闪烁，电影级画质，流畅运镜。",
+    resolution: "720P",
+    size: "16:9",
+    duration: 5,
+  }),
+}).then((r) => r.json());
+
+while (true) {
+  const task = await fetch(`${BASE}/v2/videos/generations/${submit.id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(task.data.result.videos[0].url[0]);
+    break;
+  }
+  if (task.status === "FAILURE") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 10000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "9c4e2a7b-6d1f-4b38-a5e0-3f8d1c6b2e94",
+  "task_id": "9c4e2a7b-6d1f-4b38-a5e0-3f8d1c6b2e94",
+  "object": "video",
+  "model": "wan3.0-video",
+  "status": "queued",
+  "progress": 0,
+  "created_at": 1792000000
+}
+```
+
+```json 400
+{
+  "code": "invalid_request",
+  "message": "duration 仅支持 2 到 30 的整数，或 -1",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 基础参数
+
+<ParamField body="model" type="string" required>
+  `wan3.0-video` 或 `wan3.0-video-prime`。
+</ParamField>
+
+<ParamField body="prompt" type="string" required>
+  视频描述，最长 20000 字符，超出部分自动截断。
+
+  参考生视频时，可以用「图1」「视频1」「音频1」指代素材。编号按同类素材在数组中的顺序从 1 开始，图片、视频、音频各自计数。
+</ParamField>
+
+<ParamField body="duration" type="integer" required>
+  视频时长（秒）：`2`～`30` 的整数，或 `-1` 由模型决定时长。
+
+  <Note>
+    有参考视频时，参考视频总时长加输出时长不能超过 30 秒。
+  </Note>
+</ParamField>
+
+<ParamField body="resolution" type="string" default="1080P">
+  分辨率：`480P`、`720P`、`1080P`，大小写均可。
+
+  <Warning>
+    不传时按 `1080P` 生成和计费，价格最高。对成本敏感时请显式传 `480P` 或 `720P`。
+  </Warning>
+</ParamField>
+
+<ParamField body="size" type="string" default="adaptive">
+  宽高比：`adaptive`（自适应）、`16:9`、`4:3`、`1:1`、`3:4`、`9:16`、`21:9`。也可以用 `aspect_ratio` 字段传入。
+</ParamField>
+
+<ParamField body="audio" type="boolean" default="true">
+  输出视频是否包含音轨。
+</ParamField>
+
+<ParamField body="seed" type="integer">
+  随机种子，取值 0～2147483647。
+</ParamField>
+
+<ParamField body="watermark" type="boolean" default="false">
+  是否添加水印。
+</ParamField>
+
+<ParamField body="prompt_extend" type="boolean">
+  是否由模型自动扩写提示词。传入 `file_url` 或 `link_url` 时必须为 `true`（不传时自动开启）。
+</ParamField>
+
+<ParamField body="generation_type" type="string">
+  指定 `image_urls` 中的图片按哪种方式使用：
+
+  - `frame`：作为首帧 / 尾帧
+  - `reference`：作为参考图
+
+  不传时自动判断，规则见下方「素材使用规则」。
+</ParamField>
+
+## 素材参数
+
+所有素材都需要是公网可访问的 URL。
+
+<ParamField body="image_urls" type="string[]">
+  图片 URL 数组。作为首尾帧时最多 2 张，作为参考图时最多 10 张。
+</ParamField>
+
+<ParamField body="image_with_roles" type="object[]">
+  带角色的图片数组，可以精确指定每张图的用途。每项包含：
+
+  - `url`：图片 URL
+  - `role`：`first_frame`、`last_frame` 或 `reference_image`
+
+  ```json
+  [
+    {"url": "https://example.com/first.png", "role": "first_frame"},
+    {"url": "https://example.com/last.jpg", "role": "last_frame"}
+  ]
+  ```
+</ParamField>
+
+<ParamField body="video_urls" type="string[]">
+  参考视频，最多 5 段，单段 1～15 秒，总时长不超过 15 秒。
+</ParamField>
+
+<ParamField body="audio_urls" type="string[]">
+  参考音频，最多 5 段，单段 1～15 秒，总时长不超过 15 秒。需要同时提供参考图或参考视频。
+</ParamField>
+
+<ParamField body="audio_url" type="string">
+  单条参考音频，与 `audio_urls` 只传一条时等价。
+</ParamField>
+
+<ParamField body="file_url" type="string">
+  参考文档 URL，最多 1 个，不能与 `link_url` 同时传入。支持 docx / doc / xlsx / xls / pptx / ppt / pdf / txt / key / pages / numbers / md 等格式，不超过 100 MB、50 页。
+</ParamField>
+
+<ParamField body="link_url" type="string">
+  参考网页 URL，最多 1 个，需要无需登录即可访问。不能与 `file_url` 同时传入。
+</ParamField>
+
+## 素材使用规则
+
+素材分为两类，**不能混用**，混用时提交直接返回 400，不创建任务、不扣费：
+
+| 类别 | 包含 | 含义 |
+| - | - | - |
+| 首尾帧 | `first_frame`、`last_frame` | 严格指定视频的第一帧 / 最后一帧 |
+| 参考 | 参考图、参考视频、参考音频、文档、网页 | 由模型理解素材内容后生成 |
+
+`image_urls` 中的图片按以下顺序判断用途：
+
+1. 传了 `generation_type`，以它为准。
+2. 没传，但请求中有参考视频、参考音频、文档或网页，则作为参考图。
+3. 都没有，则作为首尾帧：第 1 张为首帧，第 2 张为尾帧。
+
+尾帧必须与首帧一起使用。需要精确控制时，请使用 `image_with_roles`。
+
+## 素材要求
+
+| 类型 | 要求 |
+| - | - |
+| 图片 | JPEG / JPG / PNG（不含透明通道）/ BMP / WEBP；单边 240～8000 px，长宽比不超过 8:1，不超过 20 MB |
+| 视频 | mp4 / mov；单边 240～4096 px，长宽比不超过 8:1，不超过 100 MB |
+| 音频 | wav / mp3；不超过 15 MB |
+
+## 提交响应
+
+返回 `object` 为 `video`、`status` 为 `queued` 的任务对象，字段说明见 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0)。用其中的 `id` 调用 [查询视频任务](/api-reference/videos/task-status)。
+
+## 查询结果
+
+任务成功后，视频链接在 `data.result.videos[0].url[0]`：
+
+```json
+{
+  "task_id": "9c4e2a7b-6d1f-4b38-a5e0-3f8d1c6b2e94",
+  "action": "textGenerate",
+  "status": "SUCCESS",
+  "fail_reason": "",
+  "submit_time": 1792000000,
+  "start_time": 1792000004,
+  "finish_time": 1792000150,
+  "progress": "100%",
+  "data": {
+    "id": "9c4e2a7b-6d1f-4b38-a5e0-3f8d1c6b2e94",
+    "status": "completed",
+    "progress": 100,
+    "result": {
+      "videos": [
+        {
+          "url": ["https://example.com/generated/9c4e2a7b.mp4"],
+          "expires_at": 1792086550
+        }
+      ]
+    }
+  }
+}
+```
+
+视频链接约 24 小时后过期（见 `expires_at`），请及时下载转存。生成通常需要 1～5 分钟，时长越长耗时越久。
+
+## 使用示例
+
+### 首帧生视频
+
+```json
+{
+  "model": "wan3.0-video",
+  "prompt": "画面中的人物开始说唱，镜头缓缓推进",
+  "image_urls": ["https://example.com/first.png"],
+  "resolution": "720P",
+  "duration": 5
+}
+```
+
+### 首尾帧生视频
+
+```json
+{
+  "model": "wan3.0-video",
+  "prompt": "从微笑逐渐变为大笑，背景光线从冷色调渐变为暖色调",
+  "image_with_roles": [
+    {"url": "https://example.com/first.png", "role": "first_frame"},
+    {"url": "https://example.com/last.jpg", "role": "last_frame"}
+  ],
+  "resolution": "720P",
+  "duration": 5
+}
+```
+
+### 多素材参考生视频
+
+```json
+{
+  "model": "wan3.0-video",
+  "prompt": "视频1中的人物抱着图1的吉他，坐在图2的椅子上弹奏一支舒缓的乡村民谣，并说道：“今天的阳光真好。”",
+  "generation_type": "reference",
+  "image_urls": [
+    "https://example.com/guitar.jpg",
+    "https://example.com/chair.png"
+  ],
+  "video_urls": ["https://example.com/role.mp4"],
+  "resolution": "480P",
+  "duration": 5
+}
+```
+
+### 参考文档生视频
+
+```json
+{
+  "model": "wan3.0-video",
+  "prompt": "根据这份演示文稿制作一支产品介绍短片",
+  "file_url": "https://example.com/product.pptx",
+  "resolution": "480P",
+  "duration": 10
+}
+```
+
+### 参考网页生视频
+
+```json
+{
+  "model": "wan3.0-video",
+  "prompt": "把这篇文章做成一支科普短片",
+  "link_url": "https://example.com/article/123",
+  "resolution": "720P",
+  "duration": 15
+}
+```

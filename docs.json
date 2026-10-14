@@ -77,10 +77,17 @@
                 "icon": "video",
                 "pages": [
                   "api-reference/videos/seedance/seedance-2-5",
-                  "api-reference/videos/seedance/seedance-2-0",
-                  "api-reference/videos/task-status"
+                  "api-reference/videos/seedance/seedance-2-0"
                 ]
-              }
+              },
+              {
+                "group": "Wan",
+                "icon": "film",
+                "pages": [
+                  "api-reference/videos/wan/wan-3-0"
+                ]
+              },
+              "api-reference/videos/task-status"
             ]
           }
         ]

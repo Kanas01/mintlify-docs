@@ -1,7 +1,7 @@
 ---
 title: "查询视频任务"
 api: "GET /v2/videos/generations/{task_id}"
-description: "查询 Seedance 视频生成任务的状态和结果。"
+description: "查询 Seedance、Wan 视频生成任务的状态和结果。"
 ---
 
 视频生成接口提交后返回任务 `id`，用本接口轮询任务状态。任务成功后，视频链接在 `data` 中。
@@ -148,17 +148,18 @@ console.log(await resp.json());
 </ResponseField>
 
 <ResponseField name="data" type="object | null">
-  上游返回的任务结果，任务完成前可能为 `null`。视频链接的位置有两种：
+  上游返回的任务结果，任务完成前可能为 `null`。视频链接的位置因模型和线路而异：
 
-  | 位置 | 说明 |
-  | - | - |
-  | `data.task.outputs[0]` | 视频链接，大多数线路使用这种格式 |
-  | `data.task.usage` | token 用量 |
-  | `data.task.last_frame_url` | 尾帧图片，请求时设置了 `return_last_frame` 才有 |
-  | `data.content.video_url` | 视频链接，火山方舟原始格式 |
-  | `data.content.last_frame_url` | 尾帧图片，火山方舟原始格式 |
+  | 位置 | 适用 | 说明 |
+  | - | - | - |
+  | `data.task.outputs[0]` | Seedance | 视频链接，大多数线路使用这种格式 |
+  | `data.task.usage` | Seedance | token 用量 |
+  | `data.task.last_frame_url` | Seedance | 尾帧图片，请求时设置了 `return_last_frame` 才有 |
+  | `data.content.video_url` | Seedance | 视频链接，火山方舟原始格式 |
+  | `data.content.last_frame_url` | Seedance | 尾帧图片，火山方舟原始格式 |
+  | `data.result.videos[0].url[0]` | Wan | 视频链接 |
 
-  建议两种格式都做兼容，取第一个非空值。
+  建议按下方示例依次尝试，取第一个非空值。
 </ResponseField>
 
 ## 提取视频链接
@@ -171,14 +172,23 @@ def extract_result(data: dict) -> tuple[str | None, str | None]:
         return None, None
     task = data.get("task") or {}
     content = data.get("content") or {}
-    video = (task.get("outputs") or [None])[0] or content.get("video_url")
+    videos = (data.get("result") or {}).get("videos") or [{}]
+    video = (
+        (task.get("outputs") or [None])[0]
+        or content.get("video_url")
+        or (videos[0].get("url") or [None])[0]
+    )
     last_frame = task.get("last_frame_url") or content.get("last_frame_url")
     return video, last_frame
 ```
 
 ```javascript Node.js
 function extractResult(data) {
-  const video = data?.task?.outputs?.[0] ?? data?.content?.video_url ?? null;
+  const video =
+    data?.task?.outputs?.[0] ??
+    data?.content?.video_url ??
+    data?.result?.videos?.[0]?.url?.[0] ??
+    null;
   const lastFrame = data?.task?.last_frame_url ?? data?.content?.last_frame_url ?? null;
   return { video, lastFrame };
 }
