@@ -10,10 +10,11 @@ description: "字节跳动 Doubao Seedance 2.0 视频生成：文生视频、首
 
 ## 模型
 
-| 模型 ID | 说明 |
-| - | - |
-| `doubao-seedance-2-0-260128` | 标准版，支持 480p / 720p / 1080p |
-| `doubao-seedance-2-0-fast-260128` | 快速版，功能与标准版一致，生成更快，支持 480p / 720p |
+| 模型 ID | 说明 | 分辨率 |
+| - | - | - |
+| `Doubao-Seedance-2.0` | 标准版 | 720p / 1080p |
+| `Doubao-Seedance-2.0-fast` | 快速版，功能与标准版一致，生成更快 | 仅 720p |
+| `Doubao-Seedance-2.0-mini` | 迷你版，功能与标准版一致 | 仅 720p |
 
 可用模型以 [模型广场](https://nodylink.com/market) 为准。
 
@@ -23,7 +24,7 @@ curl https://api.nodylink.com/v2/videos/generations \
   -H "Authorization: Bearer sk-你的密钥" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "doubao-seedance-2-0-260128",
+    "model": "Doubao-Seedance-2.0",
     "content": [
       {"type": "text", "text": "小猫对着镜头打哈欠，午后阳光，浅景深"}
     ],
@@ -46,7 +47,7 @@ submit = requests.post(
     f"{BASE}/v2/videos/generations",
     headers=headers,
     json={
-        "model": "doubao-seedance-2-0-260128",
+        "model": "Doubao-Seedance-2.0",
         "content": [{"type": "text", "text": "小猫对着镜头打哈欠，午后阳光，浅景深"}],
         "resolution": "720p",
         "ratio": "16:9",
@@ -86,7 +87,7 @@ const submit = await fetch(`${BASE}/v2/videos/generations`, {
   method: "POST",
   headers,
   body: JSON.stringify({
-    model: "doubao-seedance-2-0-260128",
+    model: "Doubao-Seedance-2.0",
     content: [{ type: "text", text: "小猫对着镜头打哈欠，午后阳光，浅景深" }],
     resolution: "720p",
     ratio: "16:9",
@@ -116,7 +117,7 @@ while (true) {
   "id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
   "task_id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
   "object": "video",
-  "model": "doubao-seedance-2-0-260128",
+  "model": "Doubao-Seedance-2.0",
   "status": "queued",
   "progress": 0,
   "created_at": 1792000000
@@ -142,7 +143,7 @@ while (true) {
 ## 请求参数
 
 <ParamField body="model" type="string" required>
-  模型 ID：`doubao-seedance-2-0-260128` 或 `doubao-seedance-2-0-fast-260128`。
+  模型 ID：`Doubao-Seedance-2.0`、`Doubao-Seedance-2.0-fast` 或 `Doubao-Seedance-2.0-mini`。
 </ParamField>
 
 <ParamField body="content" type="array" required>
@@ -199,7 +200,7 @@ while (true) {
 </ParamField>
 
 <ParamField body="resolution" type="string" default="720p">
-  分辨率：`480p`、`720p`、`1080p`。快速版不支持 `1080p`。
+  分辨率：`720p` 或 `1080p`。`Doubao-Seedance-2.0-fast` 和 `Doubao-Seedance-2.0-mini` 仅支持 `720p`。
 </ParamField>
 
 <ParamField body="ratio" type="string" default="16:9">
@@ -276,7 +277,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-0-260128",
+  "model": "Doubao-Seedance-2.0",
   "content": [
     {"type": "text", "text": "女孩转身微笑，头发随风飘动"},
     {"type": "image_url", "image_url": {"url": "https://example.com/girl.jpg"}, "role": "first_frame"}
@@ -290,7 +291,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-0-260128",
+  "model": "Doubao-Seedance-2.0",
   "content": [
     {"type": "text", "text": "镜头缓慢推进，城市从白天过渡到夜晚"},
     {"type": "image_url", "image_url": {"url": "https://example.com/day.jpg"}, "role": "first_frame"},
@@ -305,7 +306,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-0-260128",
+  "model": "Doubao-Seedance-2.0",
   "content": [
     {"type": "text", "text": "图片1中的角色按照视频1的舞蹈动作跳舞，音频1作为背景音乐"},
     {"type": "image_url", "image_url": {"url": "https://example.com/character.png"}, "role": "reference_image"},
@@ -322,11 +323,11 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-0-fast-260128",
+  "model": "Doubao-Seedance-2.0-fast",
   "content": [
     {"type": "text", "text": "一辆红色跑车在海岸公路上疾驰"}
   ],
-  "resolution": "480p",
+  "resolution": "720p",
   "duration": 5,
   "return_last_frame": true
 }
@@ -338,7 +339,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-0-260128",
+  "model": "Doubao-Seedance-2.0",
   "content": [
     {"type": "text", "text": "介绍今年最新发布的国产电动汽车，产品展示风格"}
   ],

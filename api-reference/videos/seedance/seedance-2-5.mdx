@@ -12,7 +12,7 @@ description: "字节跳动 Doubao Seedance 2.5 视频生成：最长 30 秒、�
 
 | 模型 ID | 说明 |
 | - | - |
-| `doubao-seedance-2-5-260628` | 支持文生视频、首尾帧、多模态参考、视频编辑和视频延长 |
+| `Doubao-Seedance-2.5` | 支持文生视频、首尾帧、多模态参考、视频编辑和视频延长 |
 
 可用模型以 [模型广场](https://nodylink.com/market) 为准。
 
@@ -24,7 +24,7 @@ description: "字节跳动 Doubao Seedance 2.5 视频生成：最长 30 秒、�
 | 参考图 | 最多 9 张 | 最多 30 张 |
 | 参考视频 | 最多 3 个，总时长不超过 15 秒 | 最多 10 个，总时长不超过 30 秒 |
 | 参考音频 | 最多 3 段，必须搭配图片或视频 | 最多 10 段，总时长不超过 30 秒，可以单独使用 |
-| 分辨率 | 480p / 720p / 1080p | 480p / 720p / 1080p |
+| 分辨率 | 720p / 1080p（fast、mini 仅 720p） | 720p / 1080p |
 
 <RequestExample>
 ```bash cURL
@@ -32,7 +32,7 @@ curl https://api.nodylink.com/v2/videos/generations \
   -H "Authorization: Bearer sk-你的密钥" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "doubao-seedance-2-5-260628",
+    "model": "Doubao-Seedance-2.5",
     "content": [
       {"type": "text", "text": "第一视角穿越雨后的霓虹街道，镜头稳定前行，音频1作为背景音乐"},
       {"type": "audio_url", "audio_url": {"url": "https://example.com/bgm.mp3"}, "role": "reference_audio"}
@@ -55,7 +55,7 @@ submit = requests.post(
     f"{BASE}/v2/videos/generations",
     headers=headers,
     json={
-        "model": "doubao-seedance-2-5-260628",
+        "model": "Doubao-Seedance-2.5",
         "content": [
             {"type": "text", "text": "第一视角穿越雨后的霓虹街道，镜头稳定前行，音频1作为背景音乐"},
             {"type": "audio_url", "audio_url": {"url": "https://example.com/bgm.mp3"}, "role": "reference_audio"},
@@ -97,7 +97,7 @@ const submit = await fetch(`${BASE}/v2/videos/generations`, {
   method: "POST",
   headers,
   body: JSON.stringify({
-    model: "doubao-seedance-2-5-260628",
+    model: "Doubao-Seedance-2.5",
     content: [
       { type: "text", text: "第一视角穿越雨后的霓虹街道，镜头稳定前行，音频1作为背景音乐" },
       { type: "audio_url", audio_url: { url: "https://example.com/bgm.mp3" }, role: "reference_audio" },
@@ -129,7 +129,7 @@ while (true) {
   "id": "a3e7c9d2-5f1b-4a86-b0d4-8c2e6f1a9b57",
   "task_id": "a3e7c9d2-5f1b-4a86-b0d4-8c2e6f1a9b57",
   "object": "video",
-  "model": "doubao-seedance-2-5-260628",
+  "model": "Doubao-Seedance-2.5",
   "status": "queued",
   "progress": 0,
   "created_at": 1792000000
@@ -154,7 +154,7 @@ while (true) {
 ## 请求参数
 
 <ParamField body="model" type="string" required>
-  模型 ID：`doubao-seedance-2-5-260628`。
+  模型 ID：`Doubao-Seedance-2.5`。
 </ParamField>
 
 <ParamField body="content" type="array" required>
@@ -175,7 +175,7 @@ while (true) {
 </ParamField>
 
 <ParamField body="resolution" type="string" default="720p">
-  分辨率：`480p`、`720p`、`1080p`。
+  分辨率：`720p` 或 `1080p`。
 </ParamField>
 
 <ParamField body="ratio" type="string" default="adaptive">
@@ -236,7 +236,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-5-260628",
+  "model": "Doubao-Seedance-2.5",
   "content": [
     {"type": "text", "text": "图片1的模特穿着图片2的外套，在图片3的街景中走秀"},
     {"type": "image_url", "image_url": {"url": "https://example.com/model.png"}, "role": "reference_image"},
@@ -253,7 +253,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-5-260628",
+  "model": "Doubao-Seedance-2.5",
   "content": [
     {"type": "text", "text": "编辑视频1，把画面中的红色汽车替换为白色汽车，其余保持不变"},
     {"type": "video_url", "video_url": {"url": "https://example.com/source.mp4"}, "role": "reference_video"}
@@ -267,7 +267,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-5-260628",
+  "model": "Doubao-Seedance-2.5",
   "content": [
     {"type": "text", "text": "向后延长视频1，人物继续走向远处的灯塔"},
     {"type": "video_url", "video_url": {"url": "https://example.com/clip.mp4"}, "role": "reference_video"}
@@ -281,7 +281,7 @@ while (true) {
 
 ```json
 {
-  "model": "doubao-seedance-2-5-260628",
+  "model": "Doubao-Seedance-2.5",
   "content": [
     {"type": "text", "text": "花朵从含苞到完全盛开的延时摄影"},
     {"type": "image_url", "image_url": {"url": "https://example.com/bud.jpg"}, "role": "first_frame"},
