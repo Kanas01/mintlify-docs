@@ -54,6 +54,10 @@ console.log(await resp.json());
       "outputs": [
         "https://example.com/generated/6b2f8d1e.mp4"
       ],
+      "resolution": "720p",
+      "duration": 5,
+      "ratio": "16:9",
+      "draft": false,
       "usage": {
         "completion_tokens": 108900,
         "total_tokens": 108900
@@ -181,6 +185,10 @@ console.log(await resp.json());
   | `data.task.outputs[0]` | Seedance | 视频链接，大多数线路使用这种格式 |
   | `data.task.usage` | Seedance | token 用量 |
   | `data.task.last_frame_url` | Seedance | 尾帧图片，请求时设置了 `return_last_frame` 才有 |
+  | `data.task.resolution` | Seedance | 实际分辨率，例如 `720p`，部分线路在成功后返回 |
+  | `data.task.duration` | Seedance | 实际时长（秒），部分线路在成功后返回 |
+  | `data.task.ratio` | Seedance | 实际宽高比，例如 `16:9`，部分线路在成功后返回 |
+  | `data.task.draft` | Seedance | 是否为样片任务，固定为 `false`，部分线路在成功后返回 |
   | `data.content.video_url` | Seedance | 视频链接，火山方舟原始格式 |
   | `data.content.last_frame_url` | Seedance | 尾帧图片，火山方舟原始格式 |
   | `data.result.videos[0].url[0]` | Wan | 视频链接 |
