@@ -1,0 +1,268 @@
+---
+title: "素材创建"
+api: "POST /v1/seedance/asset/create"
+description: "把公网图片、视频、音频登记为 Seedance 素材，处理完成后在视频生成中通过 asset:// 引用。"
+---
+
+- 只接收公网 URL，不支持本地文件上传，也不支持 `data:` 格式的 Base64 数据。
+- 异步接口：创建后立即返回素材 `Id`，素材可能仍在处理。请调用 [查询素材处理状态](#查询素材处理状态) 每 2 秒查询一次，直到 `Status` 为 `Active`。
+- 素材可用后，在 [Seedance 视频生成](/api-reference/videos/seedance/seedance-2-0) 的 `content` 中把 URL 写成 `asset://<Id>` 即可引用，见 [在视频生成中使用](#在视频生成中使用)。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v1/seedance/asset/create \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/character.png",
+    "asset_type": "Image",
+    "name": "character.png"
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+resp = requests.post(
+    f"{BASE}/v1/seedance/asset/create",
+    headers=headers,
+    json={
+        "url": "https://example.com/character.png",
+        "asset_type": "Image",
+        "name": "character.png",
+    },
+)
+resp.raise_for_status()
+asset_id = resp.json()["result"]["Id"]
+
+while True:
+    resp = requests.post(
+        f"{BASE}/v1/seedance/asset/get",
+        headers=headers,
+        json={"id": asset_id},
+    )
+    resp.raise_for_status()
+    status = resp.json()["result"]["Status"]
+    if status == "Active":
+        break
+    if status == "Failed":
+        raise RuntimeError("素材处理失败，请检查 URL、格式、尺寸或时长")
+    time.sleep(2)
+
+print(f"asset://{asset_id}")
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const post = async (path, body) => {
+  const resp = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error?.message ?? `HTTP ${resp.status}`);
+  return data.result;
+};
+
+const { Id: assetId } = await post("/v1/seedance/asset/create", {
+  url: "https://example.com/character.png",
+  asset_type: "Image",
+  name: "character.png",
+});
+
+while (true) {
+  const { Status } = await post("/v1/seedance/asset/get", { id: assetId });
+  if (Status === "Active") break;
+  if (Status === "Failed") throw new Error("素材处理失败，请检查 URL、格式、尺寸或时长");
+  await new Promise((r) => setTimeout(r, 2000));
+}
+
+console.log(`asset://${assetId}`);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "success": true,
+  "result": {
+    "Id": "asset-xxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+```json 400
+{
+  "error": {
+    "message": "url must be a public http(s) url (request id: 2026101512000012345678)",
+    "type": "new_api_error",
+    "code": "invalid_url"
+  }
+}
+```
+
+```json 502
+{
+  "error": {
+    "message": "Seedance 创建素材失败: invalid image (request id: 2026101512000012345678)",
+    "type": "new_api_error",
+    "code": "seedance_asset_create_failed"
+  }
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 请求参数
+
+<ParamField body="url" type="string" required>
+  素材的公网直链，必须以 `http://` 或 `https://` 开头，建议使用 HTTPS。链接需要无需登录即可直接下载。
+</ParamField>
+
+<ParamField body="asset_type" type="string" default="Image">
+  素材类型：`Image`、`Video` 或 `Audio`，不区分大小写。
+</ParamField>
+
+<ParamField body="name" type="string">
+  素材名称，不超过 64 个字符。不传时使用 URL 中的文件名。
+</ParamField>
+
+## 支持格式与限制
+
+| 素材类型 | 格式 | 限制 |
+| - | - | - |
+| `Image` | jpeg、png、webp、bmp、tiff、gif、heic / heif | 宽高比 0.4～2.5，宽高 300～6000 px，单张小于 30 MB |
+| `Video` | mp4、mov | 时长 1.8～15.2 秒，高度 300～6000 px |
+| `Audio` | mp3、wav | 需提供可直接下载的音频文件 URL |
+
+## 响应
+
+<ResponseField name="success" type="boolean">
+  固定为 `true`。失败时返回 `error` 结构，见 [错误响应](#错误响应)。
+</ResponseField>
+
+<ResponseField name="result.Id" type="string">
+  素材 ID，通常以 `asset-` 开头。请保存该值，用于查询处理状态和在视频生成中引用。
+</ResponseField>
+
+<ResponseField name="result.Status" type="string">
+  初始处理状态，部分响应会返回。未返回时请直接调用查询接口获取状态。
+</ResponseField>
+
+## 查询素材处理状态
+
+`POST /v1/seedance/asset/get`
+
+创建接口返回后素材可能仍在处理。建议每 2 秒查询一次，直到 `result.Status` 为 `Active`。
+
+```bash cURL
+curl https://api.nodylink.com/v1/seedance/asset/get \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "asset-xxxxxxxxxxxxxxxx"
+  }'
+```
+
+### 请求参数
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `id` | string | 必填，创建接口返回的 `result.Id` |
+
+### 响应示例
+
+```json 200
+{
+  "success": true,
+  "result": {
+    "AssetType": "Image",
+    "CreateTime": "2026-10-15T10:42:32Z",
+    "GroupId": "group-xxxxxxxxxxxxxxxx",
+    "Id": "asset-xxxxxxxxxxxxxxxx",
+    "Moderation": {
+      "Strategy": "Default"
+    },
+    "Name": "character.png",
+    "ProjectName": "default",
+    "Status": "Active",
+    "URL": "https://example.com/character.png?SIGNED_QUERY",
+    "UpdateTime": "2026-10-15T10:42:34Z"
+  }
+}
+```
+
+### 响应字段
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `result.Id` | string | 素材 ID |
+| `result.Status` | string | 处理状态，见下表 |
+| `result.AssetType` | string | 素材类型：`Image`、`Video` 或 `Audio` |
+| `result.Name` | string | 素材名称 |
+| `result.URL` | string | 处理后的素材访问地址，是有有效期的签名 URL，不能作为素材的永久标识 |
+| `result.CreateTime` | string | 创建时间，UTC ISO 8601 格式 |
+| `result.UpdateTime` | string | 最近更新时间，UTC ISO 8601 格式 |
+
+### 处理状态
+
+| 状态 | 含义 | 处理建议 |
+| - | - | - |
+| `Pending` / `Processing` | 处理中 | 继续轮询 |
+| `Active` | 处理完成，素材可用 | 停止轮询，在视频生成中引用 |
+| `Failed` | 处理失败 | 停止轮询，检查素材 URL 能否直接下载，以及格式、尺寸、时长是否符合 [限制](#支持格式与限制) |
+
+## 在视频生成中使用
+
+素材变为 `Active` 后，在 Seedance 视频生成请求的 `content` 中，把对应的 URL 写成 `asset://<Id>`：
+
+```json
+{
+  "model": "Doubao-Seedance-2.0",
+  "content": [
+    {"type": "text", "text": "图片1中的角色在海边奔跑，镜头跟随"},
+    {"type": "image_url", "image_url": {"url": "asset://asset-xxxxxxxxxxxxxxxx"}, "role": "reference_image"}
+  ],
+  "ratio": "16:9",
+  "duration": 5
+}
+```
+
+视频和音频素材同理，分别写在 `video_url.url` 和 `audio_url.url` 中。
+
+<Warning>
+  - 素材 ID 只能在本平台的 Seedance 视频生成中使用。
+  - `result.URL` 会过期，请保存 `result.Id`，不要保存 `result.URL`。
+</Warning>
+
+## 错误响应
+
+错误使用 OpenAI 风格的错误体，格式见 [错误码](/errors)。创建和查询接口共用以下错误码：
+
+| 错误码 | 状态码 | 说明 |
+| - | - | - |
+| `invalid_request` | 400 | 请求体不是合法的 JSON |
+| `invalid_url` | 400 | `url` 缺失，或不是 http(s) 链接 |
+| `invalid_asset_type` | 400 | `asset_type` 不是 `Image`、`Video`、`Audio` 之一 |
+| `invalid_asset_name` | 400 | `name` 超过 64 个字符 |
+| `missing_asset_id` | 400 | 查询时缺少 `id` |
+| `seedance_asset_create_failed` | 502 | 素材服务创建失败，原因见 `message` |
+| `seedance_asset_get_failed` | 502 | 素材服务查询失败，例如素材 ID 不存在，原因见 `message` |
+| — | 401 | API Key 无效 |

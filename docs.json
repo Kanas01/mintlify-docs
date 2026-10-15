@@ -77,7 +77,8 @@
                 "icon": "video",
                 "pages": [
                   "api-reference/videos/seedance/seedance-2-5",
-                  "api-reference/videos/seedance/seedance-2-0"
+                  "api-reference/videos/seedance/seedance-2-0",
+                  "api-reference/videos/seedance/asset-create"
                 ]
               },
               {
