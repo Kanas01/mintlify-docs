@@ -41,11 +41,7 @@ resp.raise_for_status()
 asset_id = resp.json()["result"]["Id"]
 
 while True:
-    resp = requests.post(
-        f"{BASE}/v1/seedance/asset/get",
-        headers=headers,
-        json={"id": asset_id},
-    )
+    resp = requests.get(f"{BASE}/v1/seedance/asset/{asset_id}", headers=headers)
     resp.raise_for_status()
     status = resp.json()["result"]["Status"]
     if status == "Active":
@@ -65,25 +61,25 @@ const headers = {
   "Content-Type": "application/json",
 };
 
-const post = async (path, body) => {
+const call = async (path, body) => {
   const resp = await fetch(`${BASE}${path}`, {
-    method: "POST",
+    method: body ? "POST" : "GET",
     headers,
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
   });
   const data = await resp.json();
   if (!resp.ok) throw new Error(data.error?.message ?? `HTTP ${resp.status}`);
   return data.result;
 };
 
-const { Id: assetId } = await post("/v1/seedance/asset/create", {
+const { Id: assetId } = await call("/v1/seedance/asset/create", {
   url: "https://example.com/character.png",
   asset_type: "Image",
   name: "character.png",
 });
 
 while (true) {
-  const { Status } = await post("/v1/seedance/asset/get", { id: assetId });
+  const { Status } = await call(`/v1/seedance/asset/${assetId}`);
   if (Status === "Active") break;
   if (Status === "Failed") throw new Error("素材处理失败，请检查 URL、格式、尺寸或时长");
   await new Promise((r) => setTimeout(r, 2000));
@@ -168,22 +164,18 @@ console.log(`asset://${assetId}`);
 
 ## 查询素材处理状态
 
-`POST /v1/seedance/asset/get`
+`GET /v1/seedance/asset/{id}`
 
 创建接口返回后素材可能仍在处理。建议每 2 秒查询一次，直到 `result.Status` 为 `Active`。
 
 ```bash cURL
-curl https://api.nodylink.com/v1/seedance/asset/get \
-  -H "Authorization: Bearer sk-你的密钥" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "asset-xxxxxxxxxxxxxxxx"
-  }'
+curl https://api.nodylink.com/v1/seedance/asset/asset-xxxxxxxxxxxxxxxx \
+  -H "Authorization: Bearer sk-你的密钥"
 ```
 
-### 请求参数
+### 路径参数
 
-| 字段 | 类型 | 说明 |
+| 参数 | 类型 | 说明 |
 | - | - | - |
 | `id` | string | 必填，创建接口返回的 `result.Id` |
 
@@ -258,11 +250,10 @@ curl https://api.nodylink.com/v1/seedance/asset/get \
 
 | 错误码 | 状态码 | 说明 |
 | - | - | - |
-| `invalid_request` | 400 | 请求体不是合法的 JSON |
+| `invalid_request` | 400 | 创建时请求体不是合法的 JSON |
 | `invalid_url` | 400 | `url` 缺失，或不是 http(s) 链接 |
 | `invalid_asset_type` | 400 | `asset_type` 不是 `Image`、`Video`、`Audio` 之一 |
 | `invalid_asset_name` | 400 | `name` 超过 64 个字符 |
-| `missing_asset_id` | 400 | 查询时缺少 `id` |
 | `seedance_asset_create_failed` | 502 | 素材服务创建失败，原因见 `message` |
 | `seedance_asset_get_failed` | 502 | 素材服务查询失败，例如素材 ID 不存在，原因见 `message` |
 | — | 401 | API Key 无效 |
