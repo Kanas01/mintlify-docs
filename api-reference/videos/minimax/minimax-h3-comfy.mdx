@@ -1,0 +1,293 @@
+---
+title: "MiniMax H3 Comfy"
+api: "POST /v2/videos/generations"
+description: "MiniMax H3 Comfy 参考图生视频：至少一张参考图，可选参考音频。分辨率 480P / 768P，时长 1～15 秒，输出默认带音轨。"
+---
+
+- 只做参考图生视频：至少一张参考图，可以再配参考音频。不支持文生视频、首尾帧和参考视频。
+- 分辨率 480P / 768P，时长 1～15 秒。输出默认带音轨。
+- 异步接口：提交后立即返回任务 `id`，再调用 [查询视频任务](/api-reference/videos/task-status) 获取结果。
+- 按时长和分辨率计费，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+## 模型
+
+| 模型 ID | 说明 |
+| - | - |
+| `MiniMax-H3-Comfy` | 参考图生视频，可选参考音频 |
+
+可用模型以 [模型广场](https://nodylink.com/market) 为准。
+
+## 生成模式
+
+| 模式 | 典型传参 |
+| - | - |
+| 参考图生视频 | `image_urls` 传 1～9 张 |
+| 参考图 + 参考音频 | `image_urls` 至少 1 张，再传 `audio_urls` |
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v2/videos/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "MiniMax-H3-Comfy",
+    "prompt": "角色沿着参考图的构图缓慢转头，音色参考音频",
+    "image_urls": ["https://example.com/char.png"],
+    "audio_urls": ["https://example.com/ref_voice.mp3"],
+    "resolution": "768P",
+    "aspect_ratio": "16:9",
+    "duration": 5
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v2/videos/generations",
+    headers=headers,
+    json={
+        "model": "MiniMax-H3-Comfy",
+        "prompt": "角色沿着参考图的构图缓慢转头，音色参考音频",
+        "image_urls": ["https://example.com/char.png"],
+        "audio_urls": ["https://example.com/ref_voice.mp3"],
+        "resolution": "768P",
+        "aspect_ratio": "16:9",
+        "duration": 5,
+    },
+).json()
+task_id = submit["id"]
+
+while True:
+    task = requests.get(f"{BASE}/v2/videos/generations/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(task["data"]["result"]["videos"][0]["url"][0])
+        break
+    if task["status"] == "FAILURE":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(10)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v2/videos/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "MiniMax-H3-Comfy",
+    prompt: "角色沿着参考图的构图缓慢转头，音色参考音频",
+    image_urls: ["https://example.com/char.png"],
+    audio_urls: ["https://example.com/ref_voice.mp3"],
+    resolution: "768P",
+    aspect_ratio: "16:9",
+    duration: 5,
+  }),
+}).then((r) => r.json());
+
+while (true) {
+  const task = await fetch(`${BASE}/v2/videos/generations/${submit.id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(task.data.result.videos[0].url[0]);
+    break;
+  }
+  if (task.status === "FAILURE") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 10000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "7b1d4c8e-2a6f-4e93-9c15-0d8f3a6b1e72",
+  "task_id": "7b1d4c8e-2a6f-4e93-9c15-0d8f3a6b1e72",
+  "object": "video",
+  "model": "MiniMax-H3-Comfy",
+  "status": "queued",
+  "progress": 0,
+  "created_at": 1792000000
+}
+```
+
+```json 失败
+{
+  "task_id": "7b1d4c8e-2a6f-4e93-9c15-0d8f3a6b1e72",
+  "action": "generate",
+  "status": "FAILURE",
+  "fail_reason": "RequestParameterIsWrong: 请求参数异常 (request_id: 3f1c9a2e)",
+  "submit_time": 1792000000,
+  "start_time": 1792000002,
+  "finish_time": 1792000003,
+  "progress": "100%",
+  "data": null
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 基础参数
+
+<ParamField body="model" type="string" required>
+  固定为 `MiniMax-H3-Comfy`。
+</ParamField>
+
+<ParamField body="prompt" type="string" required>
+  视频描述，不能为空，最长 7000 字符。
+</ParamField>
+
+<ParamField body="duration" type="integer" required>
+  视频时长（秒）：`1`～`15` 的整数。
+</ParamField>
+
+<ParamField body="resolution" type="string" default="768P">
+  分辨率：`480P` 或 `768P`，大小写均可。不支持 `2K`。
+</ParamField>
+
+<ParamField body="aspect_ratio" type="string" default="9:16">
+  宽高比：`16:9`、`9:16`、`1:1`。
+
+  <Warning>
+    不传或传入其他取值时按竖屏 `9:16` 生成。需要横屏时请显式传 `16:9`。
+  </Warning>
+</ParamField>
+
+<ParamField body="seed" type="integer">
+  随机种子。
+</ParamField>
+
+## 素材参数
+
+所有素材都需要是公网可访问的 HTTP(S) URL。请求体总大小不超过 64 MB，请使用 URL，不要传 base64。
+
+<ParamField body="image_urls" type="string[]" required>
+  参考图 URL 数组，至少 1 张，最多 9 张。超出 9 张的部分会被忽略。
+</ParamField>
+
+<ParamField body="audio_urls" type="string[]">
+  参考音频 URL 数组，最多 3 条，超出部分会被忽略。必须与至少一张参考图一起使用。
+</ParamField>
+
+<Note>
+  本模型只接受参考图和参考音频。`first_frame_image`、`last_frame_image`、`image_with_roles`、`video_urls` 等字段不会传给上游，传入后会被忽略。
+</Note>
+
+## 素材要求
+
+| 类型 | 要求 |
+| - | - |
+| 图片 | JPG / JPEG / PNG / WEBP / HEIC / HEIF；单边 256～5760 px，长宽比 0.4～2.5，单文件不超过 30 MB；最多 9 张 |
+| 音频 | WAV / MP3；单段 2～15 秒，总时长不超过 15 秒，单文件不超过 15 MB；最多 3 条 |
+
+## 参数约束
+
+参数由上游校验。提交接口会先返回 `queued` 任务，不满足以下约束时任务随后变为 `FAILURE`，原因见 `fail_reason`，费用自动退回：
+
+| 参数 | 约束 |
+| - | - |
+| `prompt` | 必填且不能为空，不超过 7000 字符 |
+| `image_urls` | 至少 1 张 |
+| `audio_urls` | 必须搭配至少一张参考图 |
+| `duration` | 仅接受 `1`～`15` 的整数 |
+| `resolution` | `480P` 或 `768P` |
+| 素材 | 符合上方「素材要求」，且 URL 可被公网访问 |
+
+请求体不是合法 JSON 或缺少 `model` 时，提交接口直接返回 400，不创建任务、不扣费。HTTP 状态码含义见 [错误码](/errors)。
+
+## 提交响应
+
+返回 `object` 为 `video`、`status` 为 `queued` 的任务对象，字段说明见 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0)。用其中的 `id` 调用 [查询视频任务](/api-reference/videos/task-status)。
+
+## 查询结果
+
+任务成功后，视频链接在 `data.result.videos[0].url[0]`：
+
+```json
+{
+  "task_id": "7b1d4c8e-2a6f-4e93-9c15-0d8f3a6b1e72",
+  "action": "generate",
+  "status": "SUCCESS",
+  "fail_reason": "",
+  "submit_time": 1792000000,
+  "start_time": 1792000004,
+  "finish_time": 1792000150,
+  "progress": "100%",
+  "data": {
+    "id": "7b1d4c8e-2a6f-4e93-9c15-0d8f3a6b1e72",
+    "status": "completed",
+    "progress": 100,
+    "result": {
+      "videos": [
+        {
+          "url": ["https://example.com/generated/7b1d4c8e.mp4"],
+          "expires_at": 1792086550
+        }
+      ]
+    }
+  }
+}
+```
+
+视频链接约 24 小时后过期（见 `expires_at`），请及时下载转存。建议每 10 秒左右查询一次。
+
+## 使用示例
+
+### 仅参考图
+
+```json
+{
+  "model": "MiniMax-H3-Comfy",
+  "prompt": "镜头缓缓推近画面中的人物，城市夜景在背景中轻轻晃动",
+  "image_urls": ["https://example.com/char.png"],
+  "resolution": "480P",
+  "aspect_ratio": "9:16",
+  "duration": 5
+}
+```
+
+### 多张参考图
+
+```json
+{
+  "model": "MiniMax-H3-Comfy",
+  "prompt": "人物抱着第二张参考图里的吉他，坐在第一张参考图的场景中弹奏",
+  "image_urls": [
+    "https://example.com/scene.png",
+    "https://example.com/guitar.jpg"
+  ],
+  "resolution": "768P",
+  "aspect_ratio": "16:9",
+  "duration": 8
+}
+```
+
+### 参考图与参考音频
+
+```json
+{
+  "model": "MiniMax-H3-Comfy",
+  "prompt": "角色沿着参考图的构图缓慢转头，音色参考音频",
+  "image_urls": ["https://example.com/char.png"],
+  "audio_urls": ["https://example.com/ref_voice.mp3"],
+  "resolution": "768P",
+  "aspect_ratio": "1:1",
+  "duration": 5,
+  "seed": 42
+}
+```

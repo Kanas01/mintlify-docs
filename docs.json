@@ -88,6 +88,13 @@
                   "api-reference/videos/wan/wan-3-0"
                 ]
               },
+              {
+                "group": "MiniMax",
+                "icon": "clapperboard",
+                "pages": [
+                  "api-reference/videos/minimax/minimax-h3-comfy"
+                ]
+              },
               "api-reference/videos/task-status"
             ]
           }

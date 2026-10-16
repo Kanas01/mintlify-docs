@@ -1,7 +1,7 @@
 ---
 title: "查询视频任务"
 api: "GET /v2/videos/generations/{task_id}"
-description: "查询 Seedance、Wan 视频生成任务的状态和结果。"
+description: "查询 Seedance、Wan、MiniMax 视频生成任务的状态和结果。"
 ---
 
 视频生成接口提交后返回任务 `id`，用本接口轮询任务状态。任务成功后，视频链接在 `data` 中。
@@ -182,16 +182,14 @@ console.log(await resp.json());
 
   | 位置 | 适用 | 说明 |
   | - | - | - |
-  | `data.task.outputs[0]` | Seedance | 视频链接，大多数线路使用这种格式 |
+  | `data.task.outputs[0]` | Seedance | Seedance格式，火山引擎原生链接 |
   | `data.task.usage` | Seedance | token 用量 |
   | `data.task.last_frame_url` | Seedance | 尾帧图片，请求时设置了 `return_last_frame` 才有 |
   | `data.task.resolution` | Seedance | 实际分辨率，例如 `720p`，部分线路在成功后返回 |
   | `data.task.duration` | Seedance | 实际时长（秒），部分线路在成功后返回 |
   | `data.task.ratio` | Seedance | 实际宽高比，例如 `16:9`，部分线路在成功后返回 |
   | `data.task.draft` | Seedance | 是否为样片任务，固定为 `false`，部分线路在成功后返回 |
-  | `data.content.video_url` | Seedance | 视频链接，火山方舟原始格式 |
-  | `data.content.last_frame_url` | Seedance | 尾帧图片，火山方舟原始格式 |
-  | `data.result.videos[0].url[0]` | Wan | 视频链接 |
+  | `data.result.videos[0].url[0]` | Wan、MiniMax H3 Comfy | 视频链接，多数其他模型使用这种格式 |
 
   建议按下方示例依次尝试，取第一个非空值。
 </ResponseField>
