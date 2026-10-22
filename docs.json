@@ -83,16 +83,23 @@
               },
               {
                 "group": "Wan",
-                "icon": "film",
+                "icon": "video",
                 "pages": [
                   "api-reference/videos/wan/wan-3-0"
                 ]
               },
               {
                 "group": "MiniMax",
-                "icon": "clapperboard",
+                "icon": "video",
                 "pages": [
                   "api-reference/videos/minimax/minimax-h3-comfy"
+                ]
+              },
+              {
+                "group": "Nodydance",
+                "icon": "video",
+                "pages": [
+                  "api-reference/videos/nodydance/nodydance-2-5"
                 ]
               },
               "api-reference/videos/task-status"

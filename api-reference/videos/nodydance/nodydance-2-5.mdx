@@ -1,0 +1,224 @@
+---
+title: "Nodydance 2.5"
+api: "POST /v2/videos/generations"
+description: "Nodydance 2.5 超分视频生成：480p 超分到 720p、720p 超分到 1080p。时长 4～30 秒，最多 30 张参考图、10 个参考视频、10 段参考音频。"
+---
+
+- 超分渠道：先以较低分辨率生成，再超分到目标分辨率。`720p` 由 480p 超分得到，`1080p` 由 720p 超分得到。
+- 与其他视频模型使用同一端点，请求体使用顶层的 `aspect_ratio`、`duration`、`resolution`，参考素材通过 `referenceImages`、`referenceVideos`、`referenceAudios` 传入。
+- 异步接口：提交后立即返回任务 `id`，再调用 [查询视频任务](/api-reference/videos/task-status) 获取结果。
+- 按秒计费，单价与分辨率、是否包含参考视频相关，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+
+## 模型
+
+| 模型 ID | 说明 |
+| - | - |
+| `nodydance-2.5` | 超分渠道，支持文生视频和图片、视频、音频多模态参考 |
+
+可用模型以 [模型广场](https://nodylink.com/market) 为准。
+
+<RequestExample>
+```bash cURL
+curl https://api.nodylink.com/v2/videos/generations \
+  -H "Authorization: Bearer sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nodydance-2.5",
+    "prompt": "海边日落，镜头缓慢向前推进",
+    "aspect_ratio": "16:9",
+    "duration": 10,
+    "resolution": "720p",
+    "referenceImages": ["https://example.com/reference.jpg"],
+    "referenceVideos": ["https://example.com/video.mp4"],
+    "referenceAudios": ["https://example.com/music.mp3"]
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com"
+headers = {"Authorization": f"Bearer {API_KEY}"}
+
+submit = requests.post(
+    f"{BASE}/v2/videos/generations",
+    headers=headers,
+    json={
+        "model": "nodydance-2.5",
+        "prompt": "海边日落，镜头缓慢向前推进",
+        "aspect_ratio": "16:9",
+        "duration": 10,
+        "resolution": "720p",
+        "referenceImages": ["https://example.com/reference.jpg"],
+        "referenceVideos": ["https://example.com/video.mp4"],
+        "referenceAudios": ["https://example.com/music.mp3"],
+    },
+).json()
+task_id = submit["id"]
+
+while True:
+    task = requests.get(f"{BASE}/v2/videos/generations/{task_id}", headers=headers).json()
+    if task["status"] == "SUCCESS":
+        print(task["data"]["result_url"])
+        break
+    if task["status"] == "FAILURE":
+        raise RuntimeError(task["fail_reason"])
+    time.sleep(10)
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com";
+const headers = {
+  Authorization: `Bearer ${API_KEY}`,
+  "Content-Type": "application/json",
+};
+
+const submit = await fetch(`${BASE}/v2/videos/generations`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "nodydance-2.5",
+    prompt: "海边日落，镜头缓慢向前推进",
+    aspect_ratio: "16:9",
+    duration: 10,
+    resolution: "720p",
+    referenceImages: ["https://example.com/reference.jpg"],
+    referenceVideos: ["https://example.com/video.mp4"],
+    referenceAudios: ["https://example.com/music.mp3"],
+  }),
+}).then((r) => r.json());
+
+while (true) {
+  const task = await fetch(`${BASE}/v2/videos/generations/${submit.id}`, { headers })
+    .then((r) => r.json());
+  if (task.status === "SUCCESS") {
+    console.log(task.data.result_url);
+    break;
+  }
+  if (task.status === "FAILURE") throw new Error(task.fail_reason);
+  await new Promise((r) => setTimeout(r, 10000));
+}
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "5d8a2f1c-9b3e-4c7a-8e61-2f4b7d9c0a35",
+  "task_id": "5d8a2f1c-9b3e-4c7a-8e61-2f4b7d9c0a35",
+  "object": "video",
+  "model": "nodydance-2.5",
+  "status": "queued",
+  "progress": 0,
+  "created_at": 1792000000
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <API Key>`。在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。
+</ParamField>
+
+## 基础参数
+
+<ParamField body="model" type="string" required>
+  固定为 `nodydance-2.5`。
+</ParamField>
+
+<ParamField body="prompt" type="string">
+  视频描述。
+</ParamField>
+
+<ParamField body="resolution" type="string">
+  输出分辨率：`720p` 或 `1080p`。`720p` 由 480p 超分得到，`1080p` 由 720p 超分得到。
+</ParamField>
+
+<ParamField body="aspect_ratio" type="string">
+  宽高比：`16:9`、`9:16`、`1:1`、`4:3`、`3:4`、`21:9`，或 `adaptive`。
+</ParamField>
+
+<ParamField body="duration" type="integer">
+  视频时长（秒）：`4`～`30` 的整数。
+</ParamField>
+
+## 素材参数
+
+所有素材都需要是公网可访问的 HTTP(S) URL，不支持 base64。
+
+<ParamField body="referenceImages" type="string[]">
+  参考图 URL 数组，最多 30 张。
+</ParamField>
+
+<ParamField body="referenceVideos" type="string[]">
+  参考视频 URL 数组，最多 10 个。
+</ParamField>
+
+<ParamField body="referenceAudios" type="string[]">
+  参考音频 URL 数组，最多 10 段。
+</ParamField>
+
+## 提交响应
+
+返回 `object` 为 `video`、`status` 为 `queued` 的任务对象，字段说明见 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0)。用其中的 `id` 调用 [查询视频任务](/api-reference/videos/task-status)。
+
+## 查询结果
+
+任务成功后，视频链接在 `data.result_url`：
+
+```json
+{
+  "task_id": "5d8a2f1c-9b3e-4c7a-8e61-2f4b7d9c0a35",
+  "action": "generate",
+  "status": "SUCCESS",
+  "fail_reason": "",
+  "submit_time": 1792000000,
+  "start_time": 1792000004,
+  "finish_time": 1792000180,
+  "progress": "100%",
+  "data": {
+    "result_url": "https://example.com/generated/5d8a2f1c.mp4"
+  }
+}
+```
+
+视频链接可能会过期，拿到后请及时下载转存。建议每 10 秒左右查询一次。
+
+## 使用示例
+
+### 文生视频
+
+```json
+{
+  "model": "nodydance-2.5",
+  "prompt": "海边日落，镜头缓慢向前推进",
+  "aspect_ratio": "16:9",
+  "duration": 10,
+  "resolution": "1080p"
+}
+```
+
+### 多模态参考
+
+```json
+{
+  "model": "nodydance-2.5",
+  "prompt": "海边日落，镜头缓慢向前推进",
+  "aspect_ratio": "16:9",
+  "duration": 10,
+  "resolution": "720p",
+  "referenceImages": [
+    "https://example.com/reference.jpg"
+  ],
+  "referenceVideos": [
+    "https://example.com/video.mp4"
+  ],
+  "referenceAudios": [
+    "https://example.com/music.mp3"
+  ]
+}
+```

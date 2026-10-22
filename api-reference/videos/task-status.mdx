@@ -1,7 +1,7 @@
 ---
 title: "查询视频任务"
 api: "GET /v2/videos/generations/{task_id}"
-description: "查询 Seedance、Wan、MiniMax 视频生成任务的状态和结果。"
+description: "查询 Seedance、Wan、MiniMax、Nodydance 视频生成任务的状态和结果。"
 ---
 
 视频生成接口提交后返回任务 `id`，用本接口轮询任务状态。任务成功后，视频链接在 `data` 中。
@@ -190,6 +190,7 @@ console.log(await resp.json());
   | `data.task.ratio` | Seedance | 实际宽高比，例如 `16:9`，部分线路在成功后返回 |
   | `data.task.draft` | Seedance | 是否为样片任务，固定为 `false`，部分线路在成功后返回 |
   | `data.result.videos[0].url[0]` | Wan、MiniMax H3 Comfy | 视频链接，多数其他模型使用这种格式 |
+  | `data.result_url` | Nodydance 2.5 | 视频链接 |
 
   建议按下方示例依次尝试，取第一个非空值。
 </ResponseField>
@@ -209,6 +210,7 @@ def extract_result(data: dict) -> tuple[str | None, str | None]:
         (task.get("outputs") or [None])[0]
         or content.get("video_url")
         or (videos[0].get("url") or [None])[0]
+        or data.get("result_url")
     )
     last_frame = task.get("last_frame_url") or content.get("last_frame_url")
     return video, last_frame
@@ -220,6 +222,7 @@ function extractResult(data) {
     data?.task?.outputs?.[0] ??
     data?.content?.video_url ??
     data?.result?.videos?.[0]?.url?.[0] ??
+    data?.result_url ??
     null;
   const lastFrame = data?.task?.last_frame_url ?? data?.content?.last_frame_url ?? null;
   return { video, lastFrame };
