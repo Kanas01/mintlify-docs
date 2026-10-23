@@ -4,6 +4,10 @@ api: "POST /v1/seedance/asset/create"
 description: "把公网图片、视频、音频登记为 Seedance 素材，处理完成后在视频生成中通过 asset:// 引用。"
 ---
 
+<Tip>
+  NODYLINK 集成了多个火山渠道。建议在视频生成请求中直接传递参考图、视频、音频的 URL。平台会自动对图片和视频做人脸识别预审，并在需要时创建素材库。
+</Tip>
+
 - 只接收公网 URL，不支持本地文件上传，也不支持 `data:` 格式的 Base64 数据。
 - 异步接口：创建后立即返回素材 `Id`，素材可能仍在处理。请调用 [查询素材处理状态](#查询素材处理状态) 每 2 秒查询一次，直到 `Status` 为 `Active`。
 - 素材可用后，在 [Seedance 视频生成](/api-reference/videos/seedance/seedance-2-0) 的 `content` 中把 URL 写成 `asset://<Id>` 即可引用，见 [在视频生成中使用](#在视频生成中使用)。
