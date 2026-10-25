@@ -182,13 +182,14 @@ console.log(await resp.json());
 
   | 位置 | 适用 | 说明 |
   | - | - | - |
+  | `data.task.id` | Seedance | 上游任务号，`cgt-` 开头。[Seedance 2.5 Full](/api-reference/videos/seedance/seedance-2-5-full) 样片转正式片时，`draft_task.id` 填这个值，不要填外层 `task_id` |
   | `data.task.outputs[0]` | Seedance | Seedance格式，火山引擎原生链接 |
   | `data.task.usage` | Seedance | token 用量 |
   | `data.task.last_frame_url` | Seedance | 尾帧图片，请求时设置了 `return_last_frame` 才有 |
   | `data.task.resolution` | Seedance | 实际分辨率，例如 `720p`，部分线路在成功后返回 |
   | `data.task.duration` | Seedance | 实际时长（秒），部分线路在成功后返回 |
   | `data.task.ratio` | Seedance | 实际宽高比，例如 `16:9`，部分线路在成功后返回 |
-  | `data.task.draft` | Seedance | 是否为样片任务，固定为 `false`，部分线路在成功后返回 |
+  | `data.task.draft` | Seedance | 是否为样片。样片任务为 `true`，普通任务和正式片为 `false`。部分线路在成功后返回 |
   | `data.result.videos[0].url[0]` | Wan、MiniMax H3 Comfy | 视频链接，多数其他模型使用这种格式 |
   | `data.result_url` | Nodydance 2.5 | 视频链接 |
 

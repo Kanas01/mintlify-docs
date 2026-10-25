@@ -7,6 +7,7 @@ description: "字节跳动 Doubao Seedance 2.0 视频生成：文生视频、首
 - 请求体与 [火山方舟视频生成 API](https://www.volcengine.com/docs/82379/1520757) 官方格式一致：文本、图片、视频、音频都放在 `content` 数组中，用 `role` 区分用途。
 - 异步接口：提交后立即返回任务 `id`，再调用 [查询视频任务](/api-reference/videos/task-status) 获取结果。
 - 计费与时长、分辨率、是否包含参考视频相关，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
+- 需要 480p，或标准版的 4k 时，使用 [Seedance 2.0 Full](/api-reference/videos/seedance/seedance-2-0-full)。
 
 ## 模型
 
