@@ -139,8 +139,8 @@ while (true) {
 <ResponseExample>
 ```json 200
 {
-  "id": "a3e7c9d2-5f1b-4a86-b0d4-8c2e6f1a9b57",
-  "task_id": "a3e7c9d2-5f1b-4a86-b0d4-8c2e6f1a9b57",
+  "id": "task_01M5XZ9J4M6N8P0Q2R4S6T8V9W0",
+  "task_id": "task_01M5XZ9J4M6N8P0Q2R4S6T8V9W0",
   "object": "video",
   "model": "Doubao-Seedance-2.5-full",
   "status": "queued",
@@ -192,7 +192,7 @@ while (true) {
       固定为 `draft_task`。
     </ParamField>
     <ParamField body="draft_task.id" type="string" required>
-      样片的 `data.task.id`，`cgt-` 开头。填外层 `task_id`（UUID）会返回 400。见 [样片模式](#样片模式)。
+      样片的 `data.task.id`，`cgt-` 开头。填外层 `task_id`（如 `task_01M...`）会返回 400。见 [样片模式](#样片模式)。
     </ParamField>
   </Expandable>
 </ParamField>
@@ -287,7 +287,7 @@ curl https://api.nodylink.com/v2/videos/generations \
 
 ```json
 {
-  "task_id": "b2028cb5-663b-4a43-9760-2cf73bccd3f2",
+  "task_id": "task_01M5XZAK5M7N9P1Q3R5S7T9V0W1X",
   "status": "SUCCESS",
   "data": {
     "task": {
@@ -325,7 +325,7 @@ curl https://api.nodylink.com/v2/videos/generations \
 | 可以重新指定 | `watermark`、`return_last_frame`、`output_format`、`callback_url`、`execution_expires_after` |
 
 <Warning>
-  `draft_task.id` 填样片的 `data.task.id`（`cgt-…`），不是 `task_id`（例如 `b2028cb5-663b-4a43-9760-2cf73bccd3f2`）。填 UUID 会返回 400。
+  `draft_task.id` 填样片的 `data.task.id`（`cgt-…`），不是外层 `task_id`（例如 `task_01M5XZAK5M7N9P1Q3R5S7T9V0W1X`）。填 `task_id` 会返回 400。
 
   样片必须已经完成（`status` 为 `SUCCESS`）。样片号自创建起 7 天内有效。
 </Warning>

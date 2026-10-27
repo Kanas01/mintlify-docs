@@ -12,7 +12,7 @@ description: "查询图片生成任务的状态和结果。"
 
 <RequestExample>
 ```bash cURL
-curl https://api.nodylink.com/v1/images/tasks/3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34 \
+curl https://api.nodylink.com/v1/images/tasks/task_01M5XZ2B7K9M1N3P5Q7R9S1T3V4 \
   -H "Authorization: Bearer sk-你的密钥"
 ```
 
@@ -20,7 +20,7 @@ curl https://api.nodylink.com/v1/images/tasks/3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c
 import requests
 
 resp = requests.get(
-    "https://api.nodylink.com/v1/images/tasks/3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+    "https://api.nodylink.com/v1/images/tasks/task_01M5XZ2B7K9M1N3P5Q7R9S1T3V4",
     headers={"Authorization": "Bearer sk-你的密钥"},
 )
 print(resp.json())
@@ -28,7 +28,7 @@ print(resp.json())
 
 ```javascript Node.js
 const resp = await fetch(
-  "https://api.nodylink.com/v1/images/tasks/3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  "https://api.nodylink.com/v1/images/tasks/task_01M5XZ2B7K9M1N3P5Q7R9S1T3V4",
   { headers: { Authorization: "Bearer sk-你的密钥" } },
 );
 console.log(await resp.json());
@@ -39,7 +39,7 @@ console.log(await resp.json());
 ```json 成功
 {
   "status": "SUCCESS",
-  "task_id": "3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  "task_id": "task_01M5XZ2B7K9M1N3P5Q7R9S1T3V4",
   "progress": "100%",
   "created": 1792000060,
   "data": [
@@ -51,7 +51,7 @@ console.log(await resp.json());
 ```json 进行中
 {
   "status": "IN_PROGRESS",
-  "task_id": "3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  "task_id": "task_01M5XZ2B7K9M1N3P5Q7R9S1T3V4",
   "progress": "50%",
   "created": 1792000020
 }
@@ -60,7 +60,7 @@ console.log(await resp.json());
 ```json 失败
 {
   "status": "FAILED",
-  "task_id": "3f6c1b2a-8d4e-4f7a-9c21-5b0e7d9a1c34",
+  "task_id": "task_01M5XZ2B7K9M1N3P5Q7R9S1T3V4",
   "fail_reason": "The prompt was blocked by the safety system.",
   "created": 1792000030
 }

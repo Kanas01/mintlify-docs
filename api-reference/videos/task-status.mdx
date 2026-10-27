@@ -12,7 +12,7 @@ description: "查询 Seedance、Wan、MiniMax、Nodydance 视频生成任务的�
 
 <RequestExample>
 ```bash cURL
-curl https://api.nodylink.com/v2/videos/generations/6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36 \
+curl https://api.nodylink.com/v2/videos/generations/task_01M5XWYVFZC183T1ZJWR5N6XJK \
   -H "Authorization: Bearer sk-你的密钥"
 ```
 
@@ -20,7 +20,7 @@ curl https://api.nodylink.com/v2/videos/generations/6b2f8d1e-3c4a-4e9b-8f70-1a5d
 import requests
 
 resp = requests.get(
-    "https://api.nodylink.com/v2/videos/generations/6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+    "https://api.nodylink.com/v2/videos/generations/task_01M5XWYVFZC183T1ZJWR5N6XJK",
     headers={"Authorization": "Bearer sk-你的密钥"},
 )
 print(resp.json())
@@ -28,7 +28,7 @@ print(resp.json())
 
 ```javascript Node.js
 const resp = await fetch(
-  "https://api.nodylink.com/v2/videos/generations/6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  "https://api.nodylink.com/v2/videos/generations/task_01M5XWYVFZC183T1ZJWR5N6XJK",
   { headers: { Authorization: "Bearer sk-你的密钥" } },
 );
 console.log(await resp.json());
@@ -38,7 +38,7 @@ console.log(await resp.json());
 <ResponseExample>
 ```json 成功（Seedance）
 {
-  "task_id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  "task_id": "task_01M5XWYVFZC183T1ZJWR5N6XJK",
   "action": "textGenerate",
   "status": "SUCCESS",
   "fail_reason": "",
@@ -69,7 +69,7 @@ console.log(await resp.json());
 
 ```json 成功（Wan）
 {
-  "task_id": "9c4e2a7b-6d1f-4b38-a5e0-3f8d1c6b2e94",
+  "task_id": "task_01M5XZ1Q5N6K2P3R4S5T6V7W8X",
   "action": "textGenerate",
   "status": "SUCCESS",
   "fail_reason": "",
@@ -78,7 +78,7 @@ console.log(await resp.json());
   "finish_time": 1792000150,
   "progress": "100%",
   "data": {
-    "id": "9c4e2a7b-6d1f-4b38-a5e0-3f8d1c6b2e94",
+    "id": "task_01M5XZ1Q5N6K2P3R4S5T6V7W8X",
     "status": "completed",
     "progress": 100,
     "result": {
@@ -95,7 +95,7 @@ console.log(await resp.json());
 
 ```json 进行中
 {
-  "task_id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  "task_id": "task_01M5XWYVFZC183T1ZJWR5N6XJK",
   "action": "textGenerate",
   "status": "IN_PROGRESS",
   "fail_reason": "",
@@ -109,7 +109,7 @@ console.log(await resp.json());
 
 ```json 失败
 {
-  "task_id": "6b2f8d1e-3c4a-4e9b-8f70-1a5d9c2e7b36",
+  "task_id": "task_01M5XWYVFZC183T1ZJWR5N6XJK",
   "action": "generate",
   "status": "FAILURE",
   "fail_reason": "The request failed because the input image may contain real person.",
