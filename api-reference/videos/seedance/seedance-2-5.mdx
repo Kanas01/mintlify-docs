@@ -4,6 +4,8 @@ api: "POST /v2/videos/generations"
 description: "字节跳动 Doubao Seedance 2.5 视频生成：最长 30 秒、最多 30 张参考图，支持视频编辑与延长。请求体与火山方舟官方一致。"
 ---
 
+**如果未创建素材，则提交任务时后台将自动创建素材。**
+
 - 请求体与 [火山方舟视频生成 API](https://www.volcengine.com/docs/82379/1520757) 官方格式一致，用法与 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0) 相同，素材上限和时长范围更大。
 - 异步接口：提交后立即返回任务 `id`，再调用 [查询视频任务](/api-reference/videos/task-status) 获取结果。
 - 计费与时长、分辨率、是否包含参考视频相关，见 [模型价格](https://nodylink.com/pricing)。任务失败自动退款。
