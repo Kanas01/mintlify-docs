@@ -4,7 +4,7 @@ api: "POST /v2/videos/generations"
 description: "字节跳动 Doubao Seedance 2.0 视频生成：文生视频、首尾帧、多模态参考与有声视频。请求体与火山方舟官方一致。"
 ---
 
-**如果未创建素材，则提交任务时后台将自动创建素材。**
+<p style={{ color: "red" }}>请注意：如果请求中未创建素材，则提交任务时后台将先自动创建素材。</p>
 
 - 请求体与 [火山方舟视频生成 API](https://www.volcengine.com/docs/82379/1520757) 官方格式一致：文本、图片、视频、音频都放在 `content` 数组中，用 `role` 区分用途。
 - 异步接口：提交后立即返回任务 `id`，再调用 [查询视频任务](/api-reference/videos/task-status) 获取结果。

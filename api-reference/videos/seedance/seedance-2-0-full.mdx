@@ -4,7 +4,7 @@ api: "POST /v2/videos/generations"
 description: "Doubao Seedance 2.0 全分辨率视频生成。标准版支持 480p / 720p / 1080p / 4k，fast 与 mini 支持 480p / 720p。"
 ---
 
-**如果未创建素材，则提交任务时后台将自动创建素材。**
+<p style={{ color: "red" }}>请注意：如果请求中未创建素材，则提交任务时后台将先自动创建素材。</p>
 
 - 请求体与 [火山方舟视频生成 API](https://www.volcengine.com/docs/82379/1520757) 官方格式一致：文本、图片、视频、音频都放在 `content` 数组中，用 `role` 区分用途。素材角色和参数限制与 [Seedance 2.0](/api-reference/videos/seedance/seedance-2-0) 相同，并开放对应版本的全部输出分辨率。
 - 样片模式请使用 [Seedance 2.5 Full](/api-reference/videos/seedance/seedance-2-5-full)。
