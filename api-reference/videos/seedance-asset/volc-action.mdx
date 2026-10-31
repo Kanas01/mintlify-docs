@@ -182,7 +182,7 @@ console.log(`asset://${assetId}`);
 | `ResponseMetadata.RequestId` | string | 本次请求的唯一 ID，反馈问题时请附上 |
 | `ResponseMetadata.Action` | string | 请求的操作名 |
 | `ResponseMetadata.Version` | string | 请求的版本号 |
-| `Result` | object | 操作结果，下文各操作只列出 `Result` 的内容 |
+| `Result` | object | 操作结果，各操作的内容见下文 |
 
 ## 接口一览
 
@@ -205,16 +205,23 @@ console.log(`asset://${assetId}`);
 
 ### 创建素材组
 
-`Action=CreateAssetGroup`
+`POST /?Action=CreateAssetGroup&Version=2024-01-01`
 
 | 字段 | 类型 | 说明 |
 | - | - | - |
 | `Name` | string | 必填，素材组名称，不超过 64 个字符 |
 | `Description` | string | 选填，素材组描述，不超过 1024 个字符 |
 
-```json Result
+```json 200
 {
-  "Id": "group-20261031114658-tsb52"
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "CreateAssetGroup",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Id": "group-20261031114658-tsb52"
+  }
 }
 ```
 
@@ -222,7 +229,7 @@ console.log(`asset://${assetId}`);
 
 ### 列出素材组
 
-`Action=ListAssetGroups`
+`POST /?Action=ListAssetGroups&Version=2024-01-01`
 
 列出当前账户创建的素材组，最新创建的排在前面。请求体可以为空。
 
@@ -231,45 +238,59 @@ console.log(`asset://${assetId}`);
 | `PageNumber` | integer | 选填，页码，从 1 开始，默认 `1` |
 | `PageSize` | integer | 选填，每页条数，取值 1～100，默认 `10` |
 
-```json Result
+```json 200
 {
-  "Items": [
-    {
-      "Id": "group-20261031114658-tsb52",
-      "Name": "角色素材",
-      "Description": "主角参考图",
-      "CreateTime": "2026-10-31T03:46:58Z"
-    }
-  ],
-  "PageNumber": 1,
-  "PageSize": 10,
-  "TotalCount": 1
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "ListAssetGroups",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Items": [
+      {
+        "Id": "group-20261031114658-tsb52",
+        "Name": "角色素材",
+        "Description": "主角参考图",
+        "CreateTime": "2026-10-31T03:46:58Z"
+      }
+    ],
+    "PageNumber": 1,
+    "PageSize": 10,
+    "TotalCount": 1
+  }
 }
 ```
 
 ### 查询素材组
 
-`Action=GetAssetGroup`
+`POST /?Action=GetAssetGroup&Version=2024-01-01`
 
 | 字段 | 类型 | 说明 |
 | - | - | - |
 | `Id` | string | 必填，素材组 ID。也可以写成 `GroupId` |
 
-```json Result
+```json 200
 {
-  "Id": "group-20261031114658-tsb52",
-  "Name": "角色素材",
-  "Description": "主角参考图",
-  "GroupType": "AIGC",
-  "ProjectName": "default",
-  "CreateTime": "2026-10-31T03:46:58Z",
-  "UpdateTime": "2026-10-31T03:46:58Z"
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "GetAssetGroup",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Id": "group-20261031114658-tsb52",
+    "Name": "角色素材",
+    "Description": "主角参考图",
+    "GroupType": "AIGC",
+    "ProjectName": "default",
+    "CreateTime": "2026-10-31T03:46:58Z",
+    "UpdateTime": "2026-10-31T03:46:58Z"
+  }
 }
 ```
 
 ### 更新素材组
 
-`Action=UpdateAssetGroup`
+`POST /?Action=UpdateAssetGroup&Version=2024-01-01`
 
 `Name` 和 `Description` 至少传一个，只更新传入的字段。
 
@@ -279,15 +300,22 @@ console.log(`asset://${assetId}`);
 | `Name` | string | 选填，新名称，不能为空字符串，不超过 64 个字符 |
 | `Description` | string | 选填，新描述，不超过 1024 个字符 |
 
-```json Result
+```json 200
 {
-  "Id": "group-20261031114658-tsb52"
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "UpdateAssetGroup",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Id": "group-20261031114658-tsb52"
+  }
 }
 ```
 
 ### 删除素材组
 
-`Action=DeleteAssetGroup`
+`POST /?Action=DeleteAssetGroup&Version=2024-01-01`
 
 <Warning>
   删除素材组会同时删除组内的所有素材，且无法恢复。已提交的视频任务不受影响，但之后无法再引用这些素材。
@@ -297,9 +325,16 @@ console.log(`asset://${assetId}`);
 | - | - | - |
 | `Id` | string | 必填，素材组 ID。也可以写成 `GroupId` |
 
-```json Result
+```json 200
 {
-  "Id": "group-20261031114658-tsb52"
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "DeleteAssetGroup",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Id": "group-20261031114658-tsb52"
+  }
 }
 ```
 
@@ -307,7 +342,7 @@ console.log(`asset://${assetId}`);
 
 ### 创建素材
 
-`Action=CreateAsset`
+`POST /?Action=CreateAsset&Version=2024-01-01`
 
 把公网素材登记到指定素材组，立即返回素材 `Id`，不等待处理完成。
 
@@ -318,9 +353,16 @@ console.log(`asset://${assetId}`);
 | `AssetType` | string | 选填，素材类型：`Image`、`Video` 或 `Audio`，不区分大小写，默认 `Image` |
 | `Name` | string | 选填，素材名称，不超过 64 个字符。不传时使用 URL 中的文件名 |
 
-```json Result
+```json 200
 {
-  "Id": "asset-20261031114703-96kw4"
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "CreateAsset",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Id": "asset-20261031114703-96kw4"
+  }
 }
 ```
 
@@ -330,7 +372,7 @@ console.log(`asset://${assetId}`);
 
 ### 查询素材
 
-`Action=GetAsset`
+`POST /?Action=GetAsset&Version=2024-01-01`
 
 创建后素材可能仍在处理。建议每 2 秒查询一次，直到 `Status` 为 `Active`。
 
@@ -338,20 +380,27 @@ console.log(`asset://${assetId}`);
 | - | - | - |
 | `Id` | string | 必填，素材 ID |
 
-```json Result
+```json 200
 {
-  "Id": "asset-20261031114703-96kw4",
-  "Name": "character.png",
-  "AssetType": "Image",
-  "GroupId": "group-20261031114658-tsb52",
-  "Status": "Active",
-  "URL": "https://ark-media-asset.tos-cn-beijing.volces.com/...png?X-Tos-Signature=...",
-  "Moderation": {
-    "Strategy": "Default"
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "GetAsset",
+    "Version": "2024-01-01"
   },
-  "ProjectName": "default",
-  "CreateTime": "2026-10-31T03:47:03Z",
-  "UpdateTime": "2026-10-31T03:47:04Z"
+  "Result": {
+    "Id": "asset-20261031114703-96kw4",
+    "Name": "character.png",
+    "AssetType": "Image",
+    "GroupId": "group-20261031114658-tsb52",
+    "Status": "Active",
+    "URL": "https://ark-media-asset.tos-cn-beijing.volces.com/...png?X-Tos-Signature=...",
+    "Moderation": {
+      "Strategy": "Default"
+    },
+    "ProjectName": "default",
+    "CreateTime": "2026-10-31T03:47:03Z",
+    "UpdateTime": "2026-10-31T03:47:04Z"
+  }
 }
 ```
 
@@ -372,7 +421,7 @@ console.log(`asset://${assetId}`);
 
 ### 列出素材
 
-`Action=ListAssets`
+`POST /?Action=ListAssets&Version=2024-01-01`
 
 列出指定素材组内的素材。
 
@@ -383,33 +432,40 @@ console.log(`asset://${assetId}`);
 | `PageNumber` | integer | 选填，页码，从 1 开始，默认 `1` |
 | `PageSize` | integer | 选填，每页条数，取值 1～100，默认 `10` |
 
-```json Result
+```json 200
 {
-  "Items": [
-    {
-      "Id": "asset-20261031114703-96kw4",
-      "Name": "character.png",
-      "AssetType": "Image",
-      "GroupId": "group-20261031114658-tsb52",
-      "Status": "Active",
-      "URL": "https://ark-media-asset.tos-cn-beijing.volces.com/...png?X-Tos-Signature=...",
-      "Moderation": {
-        "Strategy": "Default"
-      },
-      "ProjectName": "default",
-      "CreateTime": "2026-10-31T03:47:03Z",
-      "UpdateTime": "2026-10-31T03:47:04Z"
-    }
-  ],
-  "PageNumber": 1,
-  "PageSize": 10,
-  "TotalCount": 1
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "ListAssets",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Items": [
+      {
+        "Id": "asset-20261031114703-96kw4",
+        "Name": "character.png",
+        "AssetType": "Image",
+        "GroupId": "group-20261031114658-tsb52",
+        "Status": "Active",
+        "URL": "https://ark-media-asset.tos-cn-beijing.volces.com/...png?X-Tos-Signature=...",
+        "Moderation": {
+          "Strategy": "Default"
+        },
+        "ProjectName": "default",
+        "CreateTime": "2026-10-31T03:47:03Z",
+        "UpdateTime": "2026-10-31T03:47:04Z"
+      }
+    ],
+    "PageNumber": 1,
+    "PageSize": 10,
+    "TotalCount": 1
+  }
 }
 ```
 
 ### 更新素材
 
-`Action=UpdateAsset`
+`POST /?Action=UpdateAsset&Version=2024-01-01`
 
 目前只支持修改素材名称。
 
@@ -418,22 +474,36 @@ console.log(`asset://${assetId}`);
 | `Id` | string | 必填，素材 ID |
 | `Name` | string | 必填，新名称，不能为空，不超过 64 个字符 |
 
-```json Result
+```json 200
 {
-  "Id": "asset-20261031114703-96kw4"
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "UpdateAsset",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Id": "asset-20261031114703-96kw4"
+  }
 }
 ```
 
 ### 删除素材
 
-`Action=DeleteAsset`
+`POST /?Action=DeleteAsset&Version=2024-01-01`
 
 | 字段 | 类型 | 说明 |
 | - | - | - |
 | `Id` | string | 必填，素材 ID |
 
-```json Result
-{}
+```json 200
+{
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "DeleteAsset",
+    "Version": "2024-01-01"
+  },
+  "Result": {}
+}
 ```
 
 删除成功时 `Result` 可能为空对象，也可能带 `Id`，请以 HTTP 200 判断成功。删除后再访问该素材会返回 403 `seedance_asset_forbidden`。
