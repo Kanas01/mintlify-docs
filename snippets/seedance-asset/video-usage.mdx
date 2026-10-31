@@ -1,0 +1,20 @@
+素材变为 `Active` 后，在 [Seedance 视频生成](/api-reference/videos/seedance/seedance-2-0) 请求的 `content` 中，把对应的 URL 写成 `asset://<Id>`：
+
+```json
+{
+  "model": "Doubao-Seedance-2.0",
+  "content": [
+    {"type": "text", "text": "图片1中的角色在海边奔跑，镜头跟随"},
+    {"type": "image_url", "image_url": {"url": "asset://asset-20261031114703-96kw4"}, "role": "reference_image"}
+  ],
+  "ratio": "16:9",
+  "duration": 5
+}
+```
+
+视频和音频素材同理，分别写在 `video_url.url` 和 `audio_url.url` 中。
+
+<Warning>
+  - 素材 ID 只能在本平台的 Seedance 视频生成中使用。
+  - 素材详情里的 `URL` 是会过期的签名地址，请保存素材 `Id`，不要保存 `URL`。
+</Warning>

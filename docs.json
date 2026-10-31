@@ -79,8 +79,16 @@
                   "api-reference/videos/seedance/seedance-2-5",
                   "api-reference/videos/seedance/seedance-2-5-full",
                   "api-reference/videos/seedance/seedance-2-0",
-                  "api-reference/videos/seedance/seedance-2-0-full",
-                  "api-reference/videos/seedance/asset-create"
+                  "api-reference/videos/seedance/seedance-2-0-full"
+                ]
+              },
+              {
+                "group": "Seedance 素材",
+                "icon": "folder-open",
+                "pages": [
+                  "api-reference/videos/seedance-asset/v1",
+                  "api-reference/videos/seedance-asset/volc-rest",
+                  "api-reference/videos/seedance-asset/volc-action"
                 ]
               },
               {
@@ -125,6 +133,12 @@
       ]
     }
   },
+  "redirects": [
+    {
+      "source": "/api-reference/videos/seedance/asset-create",
+      "destination": "/api-reference/videos/seedance-asset/v1"
+    }
+  ],
   "navbar": {
     "links": [
       {

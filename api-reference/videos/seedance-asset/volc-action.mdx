@@ -1,0 +1,498 @@
+---
+title: "Seedance 素材（火山 SDK Action）"
+sidebarTitle: "火山 SDK Action"
+description: "用火山引擎 OpenAPI 的 Action 格式管理 Seedance 素材组和素材，处理完成后在视频生成中通过 asset:// 引用。"
+---
+
+import Limits from "/snippets/seedance-asset/limits.mdx";
+import Status from "/snippets/seedance-asset/status.mdx";
+import VideoUsage from "/snippets/seedance-asset/video-usage.mdx";
+
+- 请求格式与火山引擎 OpenAPI 一致：`POST https://api.nodylink.com/?Action=<Action>&Version=2024-01-01`，请求体为 JSON，字段使用 PascalCase。
+- 成功响应为 `{"ResponseMetadata": {...}, "Result": {...}}`，错误放在 `ResponseMetadata.Error` 中。
+- 用 `x-api-key` 请求头传本平台的 API Key。火山 SDK 自动附带的 HMAC 签名会被忽略，只带签名会返回 401。
+- 创建素材必须传 `GroupId`，请先 [创建素材组](#创建素材组)。
+- 素材按账户隔离：同一账户下的所有 API Key 共享素材组和素材，其他账户无法访问。
+- 创建素材是异步的：接口立即返回素材 `Id`，请每 2 秒 [查询素材](#查询素材) 一次，直到 `Status` 为 `Active`，然后在视频生成中 [通过 asset:// 引用](#在视频生成中使用)。
+
+<Tip>
+  三种接口格式功能相同、数据互通，按你的客户端选一种即可。也可以使用 [v1 接口](/api-reference/videos/seedance-asset/v1) 或 [火山标准 REST](/api-reference/videos/seedance-asset/volc-rest)。
+</Tip>
+
+<RequestExample>
+```bash cURL
+curl "https://api.nodylink.com/?Action=CreateAsset&Version=2024-01-01" \
+  -H "x-api-key: sk-你的密钥" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "GroupId": "group-20261031114658-tsb52",
+    "Url": "https://example.com/character.png",
+    "AssetType": "Image",
+    "Name": "character.png"
+  }'
+```
+
+```python Python
+import time
+import requests
+
+API_KEY = "sk-你的密钥"
+BASE = "https://api.nodylink.com/"
+headers = {"x-api-key": API_KEY}
+
+
+def call(action: str, body: dict) -> dict:
+    resp = requests.post(
+        BASE,
+        params={"Action": action, "Version": "2024-01-01"},
+        headers=headers,
+        json=body,
+    )
+    data = resp.json()
+    if not resp.ok:
+        error = data.get("ResponseMetadata", {}).get("Error") or data.get("error") or {}
+        raise RuntimeError(error.get("Message") or error.get("message"))
+    return data["Result"]
+
+
+group_id = call("CreateAssetGroup", {"Name": "角色素材"})["Id"]
+asset_id = call("CreateAsset", {
+    "GroupId": group_id,
+    "Url": "https://example.com/character.png",
+    "AssetType": "Image",
+    "Name": "character.png",
+})["Id"]
+
+while True:
+    status = call("GetAsset", {"Id": asset_id})["Status"]
+    if status == "Active":
+        break
+    if status == "Failed":
+        raise RuntimeError("素材处理失败，请检查 URL、格式、尺寸或时长")
+    time.sleep(2)
+
+print(f"asset://{asset_id}")
+```
+
+```javascript Node.js
+const API_KEY = "sk-你的密钥";
+const BASE = "https://api.nodylink.com/";
+
+const call = async (action, body) => {
+  const resp = await fetch(`${BASE}?Action=${action}&Version=2024-01-01`, {
+    method: "POST",
+    headers: {
+      "x-api-key": API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json();
+  if (!resp.ok) {
+    const error = data.ResponseMetadata?.Error ?? data.error ?? {};
+    throw new Error(error.Message ?? error.message ?? `HTTP ${resp.status}`);
+  }
+  return data.Result;
+};
+
+const { Id: groupId } = await call("CreateAssetGroup", { Name: "角色素材" });
+const { Id: assetId } = await call("CreateAsset", {
+  GroupId: groupId,
+  Url: "https://example.com/character.png",
+  AssetType: "Image",
+  Name: "character.png",
+});
+
+while (true) {
+  const { Status } = await call("GetAsset", { Id: assetId });
+  if (Status === "Active") break;
+  if (Status === "Failed") throw new Error("素材处理失败，请检查 URL、格式、尺寸或时长");
+  await new Promise((r) => setTimeout(r, 2000));
+}
+
+console.log(`asset://${assetId}`);
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "ResponseMetadata": {
+    "RequestId": "20261031034708416274848WD4xgSV0",
+    "Action": "CreateAsset",
+    "Version": "2024-01-01"
+  },
+  "Result": {
+    "Id": "asset-20261031114703-96kw4"
+  }
+}
+```
+
+```json 400
+{
+  "ResponseMetadata": {
+    "RequestId": "20261031034720797331853pfoFa8bB",
+    "Action": "CreateAsset",
+    "Version": "2024-01-01",
+    "Error": {
+      "Code": "missing_group_id",
+      "Message": "group_id is required"
+    }
+  }
+}
+```
+
+```json 403
+{
+  "ResponseMetadata": {
+    "RequestId": "202610310347158300861225tjPSa7Z",
+    "Action": "GetAsset",
+    "Version": "2024-01-01",
+    "Error": {
+      "Code": "seedance_asset_forbidden",
+      "Message": "素材或素材组不存在，或当前账号无权访问"
+    }
+  }
+}
+```
+</ResponseExample>
+
+## 鉴权
+
+<ParamField header="x-api-key" type="string" required>
+  本平台的 API Key，在 [API 密钥](https://nodylink.com/dashboard/keys) 页面创建。也可以改用 `Authorization: Bearer <API Key>`。
+</ParamField>
+
+使用火山 SDK 时，把服务地址改成 `api.nodylink.com`，并在请求头中加上 `x-api-key`。SDK 用 AK/SK 生成的 HMAC 签名会被忽略，AK/SK 不会被校验。
+
+## 公共参数
+
+<ParamField query="Action" type="string" required>
+  操作名，见 [接口一览](#接口一览)。
+</ParamField>
+
+<ParamField query="Version" type="string" required>
+  固定为 `2024-01-01`。
+</ParamField>
+
+所有操作的成功响应都带 `ResponseMetadata`：
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `ResponseMetadata.RequestId` | string | 本次请求的唯一 ID，反馈问题时请附上 |
+| `ResponseMetadata.Action` | string | 请求的操作名 |
+| `ResponseMetadata.Version` | string | 请求的版本号 |
+| `Result` | object | 操作结果，下文各操作只列出 `Result` 的内容 |
+
+## 接口一览
+
+| 操作 | Action |
+| - | - |
+| [创建素材组](#创建素材组) | `CreateAssetGroup` |
+| [列出素材组](#列出素材组) | `ListAssetGroups` |
+| [查询素材组](#查询素材组) | `GetAssetGroup` |
+| [更新素材组](#更新素材组) | `UpdateAssetGroup` |
+| [删除素材组](#删除素材组) | `DeleteAssetGroup` |
+| [创建素材](#创建素材) | `CreateAsset` |
+| [查询素材](#查询素材) | `GetAsset` |
+| [列出素材](#列出素材) | `ListAssets` |
+| [更新素材](#更新素材) | `UpdateAsset` |
+| [删除素材](#删除素材) | `DeleteAsset` |
+
+## 素材组
+
+素材组用于归类素材。素材组和组内素材只对创建它的账户可见。
+
+### 创建素材组
+
+`Action=CreateAssetGroup`
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Name` | string | 必填，素材组名称，不超过 64 个字符 |
+| `Description` | string | 选填，素材组描述，不超过 1024 个字符 |
+
+```json Result
+{
+  "Id": "group-20261031114658-tsb52"
+}
+```
+
+请保存 `Result.Id`，后续操作通过它指定素材组。
+
+### 列出素材组
+
+`Action=ListAssetGroups`
+
+列出当前账户创建的素材组，最新创建的排在前面。请求体可以为空。
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `PageNumber` | integer | 选填，页码，从 1 开始，默认 `1` |
+| `PageSize` | integer | 选填，每页条数，取值 1～100，默认 `10` |
+
+```json Result
+{
+  "Items": [
+    {
+      "Id": "group-20261031114658-tsb52",
+      "Name": "角色素材",
+      "Description": "主角参考图",
+      "CreateTime": "2026-10-31T03:46:58Z"
+    }
+  ],
+  "PageNumber": 1,
+  "PageSize": 10,
+  "TotalCount": 1
+}
+```
+
+### 查询素材组
+
+`Action=GetAssetGroup`
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Id` | string | 必填，素材组 ID。也可以写成 `GroupId` |
+
+```json Result
+{
+  "Id": "group-20261031114658-tsb52",
+  "Name": "角色素材",
+  "Description": "主角参考图",
+  "GroupType": "AIGC",
+  "ProjectName": "default",
+  "CreateTime": "2026-10-31T03:46:58Z",
+  "UpdateTime": "2026-10-31T03:46:58Z"
+}
+```
+
+### 更新素材组
+
+`Action=UpdateAssetGroup`
+
+`Name` 和 `Description` 至少传一个，只更新传入的字段。
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Id` | string | 必填，素材组 ID。也可以写成 `GroupId` |
+| `Name` | string | 选填，新名称，不能为空字符串，不超过 64 个字符 |
+| `Description` | string | 选填，新描述，不超过 1024 个字符 |
+
+```json Result
+{
+  "Id": "group-20261031114658-tsb52"
+}
+```
+
+### 删除素材组
+
+`Action=DeleteAssetGroup`
+
+<Warning>
+  删除素材组会同时删除组内的所有素材，且无法恢复。已提交的视频任务不受影响，但之后无法再引用这些素材。
+</Warning>
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Id` | string | 必填，素材组 ID。也可以写成 `GroupId` |
+
+```json Result
+{
+  "Id": "group-20261031114658-tsb52"
+}
+```
+
+## 素材
+
+### 创建素材
+
+`Action=CreateAsset`
+
+把公网素材登记到指定素材组，立即返回素材 `Id`，不等待处理完成。
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `GroupId` | string | 必填，素材组 ID，必须是当前账户创建的素材组 |
+| `Url` | string | 必填，素材的公网直链，必须以 `http://` 或 `https://` 开头 |
+| `AssetType` | string | 选填，素材类型：`Image`、`Video` 或 `Audio`，不区分大小写，默认 `Image` |
+| `Name` | string | 选填，素材名称，不超过 64 个字符。不传时使用 URL 中的文件名 |
+
+```json Result
+{
+  "Id": "asset-20261031114703-96kw4"
+}
+```
+
+### 支持格式与限制
+
+<Limits />
+
+### 查询素材
+
+`Action=GetAsset`
+
+创建后素材可能仍在处理。建议每 2 秒查询一次，直到 `Status` 为 `Active`。
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Id` | string | 必填，素材 ID |
+
+```json Result
+{
+  "Id": "asset-20261031114703-96kw4",
+  "Name": "character.png",
+  "AssetType": "Image",
+  "GroupId": "group-20261031114658-tsb52",
+  "Status": "Active",
+  "URL": "https://ark-media-asset.tos-cn-beijing.volces.com/...png?X-Tos-Signature=...",
+  "Moderation": {
+    "Strategy": "Default"
+  },
+  "ProjectName": "default",
+  "CreateTime": "2026-10-31T03:47:03Z",
+  "UpdateTime": "2026-10-31T03:47:04Z"
+}
+```
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Result.Id` | string | 素材 ID |
+| `Result.Name` | string | 素材名称 |
+| `Result.AssetType` | string | 素材类型：`Image`、`Video` 或 `Audio` |
+| `Result.GroupId` | string | 所属素材组 ID |
+| `Result.Status` | string | 处理状态，见 [处理状态](#处理状态) |
+| `Result.URL` | string | 处理后的素材访问地址，是有有效期的签名 URL，不能作为素材的永久标识 |
+| `Result.CreateTime` | string | 创建时间，UTC ISO 8601 格式 |
+| `Result.UpdateTime` | string | 最近更新时间，UTC ISO 8601 格式 |
+
+### 处理状态
+
+<Status />
+
+### 列出素材
+
+`Action=ListAssets`
+
+列出指定素材组内的素材。
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `GroupId` | string | 素材组 ID，与 `Filter.GroupIds` 二选一 |
+| `Filter.GroupIds` | string[] | 火山 SDK 的写法，例如 `{"Filter": {"GroupIds": ["group-..."]}}`。只支持传一个组 |
+| `PageNumber` | integer | 选填，页码，从 1 开始，默认 `1` |
+| `PageSize` | integer | 选填，每页条数，取值 1～100，默认 `10` |
+
+```json Result
+{
+  "Items": [
+    {
+      "Id": "asset-20261031114703-96kw4",
+      "Name": "character.png",
+      "AssetType": "Image",
+      "GroupId": "group-20261031114658-tsb52",
+      "Status": "Active",
+      "URL": "https://ark-media-asset.tos-cn-beijing.volces.com/...png?X-Tos-Signature=...",
+      "Moderation": {
+        "Strategy": "Default"
+      },
+      "ProjectName": "default",
+      "CreateTime": "2026-10-31T03:47:03Z",
+      "UpdateTime": "2026-10-31T03:47:04Z"
+    }
+  ],
+  "PageNumber": 1,
+  "PageSize": 10,
+  "TotalCount": 1
+}
+```
+
+### 更新素材
+
+`Action=UpdateAsset`
+
+目前只支持修改素材名称。
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Id` | string | 必填，素材 ID |
+| `Name` | string | 必填，新名称，不能为空，不超过 64 个字符 |
+
+```json Result
+{
+  "Id": "asset-20261031114703-96kw4"
+}
+```
+
+### 删除素材
+
+`Action=DeleteAsset`
+
+| 字段 | 类型 | 说明 |
+| - | - | - |
+| `Id` | string | 必填，素材 ID |
+
+```json Result
+{}
+```
+
+删除成功时 `Result` 可能为空对象，也可能带 `Id`，请以 HTTP 200 判断成功。删除后再访问该素材会返回 403 `seedance_asset_forbidden`。
+
+## 在视频生成中使用
+
+<VideoUsage />
+
+## 错误响应
+
+错误放在 `ResponseMetadata.Error` 中，没有 `Result`：
+
+```json
+{
+  "ResponseMetadata": {
+    "RequestId": "202610310347158300861225tjPSa7Z",
+    "Action": "GetAsset",
+    "Version": "2024-01-01",
+    "Error": {
+      "Code": "seedance_asset_forbidden",
+      "Message": "素材或素材组不存在，或当前账号无权访问"
+    }
+  }
+}
+```
+
+<Note>
+  API Key 无效时由网关统一返回，使用 OpenAI 风格的错误体 `{"error": {"message": "...", "code": "..."}}`，格式见 [错误码](/errors)。处理错误时请同时兼容两种结构。
+</Note>
+
+| 错误码 | 状态码 | 说明 |
+| - | - | - |
+| `InvalidAction` | 400 | `Action` 不受支持 |
+| `InvalidVersion` | 400 | `Version` 不是 `2024-01-01` |
+| `invalid_request` | 400 | 请求体不是合法的 JSON |
+| `invalid_url` | 400 | `Url` 缺失、不是 http(s) 链接，或使用了 `data:` 格式 |
+| `invalid_asset_type` | 400 | `AssetType` 不是 `Image`、`Video`、`Audio` 之一 |
+| `invalid_asset_name` | 400 | 素材名称超过 64 个字符 |
+| `missing_asset_id` | 400 | 未传素材 `Id` |
+| `missing_asset_name` | 400 | 更新素材时未传 `Name`，或为空 |
+| `missing_group_id` | 400 | 未传素材组 ID，创建素材时也必须传 |
+| `invalid_group_ids` | 400 | `ListAssets` 的 `Filter.GroupIds` 传了多个组 |
+| `missing_group_name` | 400 | 创建素材组时未传 `Name`，或更新时 `Name` 为空字符串 |
+| `invalid_group_name` | 400 | 素材组名称超过 64 个字符 |
+| `invalid_group_description` | 400 | 素材组描述超过 1024 个字符 |
+| `missing_update_fields` | 400 | 更新素材组时 `Name` 和 `Description` 都没传 |
+| `invalid_page_number` | 400 | `PageNumber` 小于 1 |
+| `invalid_page_size` | 400 | `PageSize` 不在 1～100 之间 |
+| `MissingAPIKey` | 401 | 只带了 HMAC 签名，没有 `x-api-key` 或 `Authorization: Bearer` |
+| — | 401 | API Key 无效，返回 OpenAI 风格的错误体 |
+| `seedance_asset_forbidden` | 403 | 素材或素材组不存在、已删除或属于其他账户 |
+| `seedance_upstream_bad_request` | 400 | 素材服务认为参数不合法，原因见 `Message`，修正后再试 |
+| `seedance_upstream_rejected` | 422 | 素材服务拒绝了请求，原因见 `Message` |
+| `seedance_upstream_rate_limited` | 429 | 素材服务限流，请退避后重试 |
+| `seedance_upstream_denied` | 502 | 素材服务拒绝访问，资源可能已被删除 |
+| `seedance_upstream_failed` | 502 | 素材服务异常或超时，请稍后重试 |
+| `seedance_upstream_bad_response` | 502 | 素材服务返回的数据缺少素材 ID，请稍后重试 |
+| `seedance_asset_store_failed` | 500 | 保存素材归属失败，请稍后重试 |
+
+<Note>
+  素材管理接口上线前通过旧版接口创建的素材没有账户归属记录，查询、更新、删除时会返回 403，但仍可在视频生成中通过 `asset://<Id>` 引用。
+</Note>
