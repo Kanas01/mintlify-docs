@@ -8,7 +8,7 @@ import Limits from "/snippets/seedance-asset/limits.mdx";
 import Status from "/snippets/seedance-asset/status.mdx";
 import VideoUsage from "/snippets/seedance-asset/video-usage.mdx";
 
-<p style={{ color: "red" }}>请注意：如果请求中未创建素材，则提交任务时后台将先自动创建素材。</p>
+<p style={{ color: "red" }}>请注意：如果Seedance生成请求中未创建素材，后台将为其自动创建素材再提交任务。因此若无需素材管理则生成请求中直接传公网URL即可。</p>
 
 - 接口路径与火山引擎素材接口 `/api/v3/asset/*` 一致，只需把服务地址换成 `https://api.nodylink.com`，并用本平台的 API Key 鉴权。
 - 所有操作都是 `POST`，请求体为 JSON，字段使用 snake_case。

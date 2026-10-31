@@ -8,7 +8,7 @@ import Limits from "/snippets/seedance-asset/limits.mdx";
 import Status from "/snippets/seedance-asset/status.mdx";
 import VideoUsage from "/snippets/seedance-asset/video-usage.mdx";
 
-<p style={{ color: "red" }}>请注意：如果请求中未创建素材，则提交任务时后台将先自动创建素材。</p>
+<p style={{ color: "red" }}>请注意：如果Seedance生成请求中未创建素材，后台将为其自动创建素材再提交任务。因此若无需素材管理则生成请求中直接传公网URL即可。</p>
 
 - 接口前缀为 `https://api.nodylink.com/v1/seedance/asset`，所有操作都是 `POST`，请求体为 JSON，字段使用 snake_case。
 - 成功响应为 `{"success": true, "result": {...}}`，错误使用 OpenAI 风格的错误体。
