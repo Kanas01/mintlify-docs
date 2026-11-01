@@ -83,6 +83,14 @@
                 ]
               },
               {
+                "group": "Dreamina Seedance",
+                "icon": "video",
+                "pages": [
+                  "api-reference/videos/dreamina/seedance-2-5-full",
+                  "api-reference/videos/dreamina/seedance-2-0-full"
+                ]
+              },
+              {
                 "group": "Seedance 素材",
                 "icon": "folder-open",
                 "pages": [
