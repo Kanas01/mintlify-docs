@@ -48,17 +48,6 @@
             ]
           },
           {
-            "group": "文本对话系列",
-            "pages": [
-              "api-reference/texts/chat-completions",
-              "api-reference/texts/chat-completions-nostream",
-              "api-reference/texts/claude-messages",
-              "api-reference/texts/gemini-native",
-              "api-reference/texts/responses",
-              "api-reference/texts/claude-context-cache"
-            ]
-          },
-          {
             "group": "图片系列",
             "pages": [
               "api-reference/images/gpt-image-2",

@@ -15,12 +15,6 @@ NODYLINK 提供统一的 OpenAI 兼容端点，同时支持 Claude Messages、Ge
 ## 接口一览
 
 <CardGroup cols={2}>
-  <Card title="文本对话" icon="message" href="/api-reference/texts/chat-completions">
-    `POST /v1/chat/completions`，兼容 OpenAI Chat Completions，支持流式输出。
-  </Card>
-  <Card title="Claude / Gemini 原生协议" icon="code" href="/api-reference/texts/claude-messages">
-    `POST /v1/messages` 与 `POST /v1beta/models/{model}:generateContent`，官方 SDK 直接可用。
-  </Card>
   <Card title="图像生成" icon="image" href="/api-reference/images/gpt-image-2">
     `POST /v1/images/generations`，GPT Image 与 Gemini Image 系列，异步任务出图。
   </Card>
@@ -76,8 +70,6 @@ const client = new OpenAI({
 });
 ```
 </CodeGroup>
-
-使用 Anthropic SDK 调用 Claude 时，`base_url` 填 `https://api.nodylink.com`（不带 `/v1`），详见 [Claude 消息接口](/api-reference/texts/claude-messages)。
 
 ## 平台特性
 
